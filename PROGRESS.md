@@ -12,7 +12,8 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - A quick check job runs first (about 5 minutes). It catches typos in Python, shell, Lua and XML, and test-generates all themes before the long build starts.
 - Image name: `NEXUS-OS-prototype_<version>_radxa-zero3.img.xz` (Actions artifact only, no release).
 - Status: written, not yet built or tested. **Everything in it needs device test.**
-- Needs Elijah's OK before any of it moves into the main build: the extra packages and the spec differences listed in `prototype/README.md`. The biggest ones: AntiMicroX swapped for a built-in helper (no ARM build), PPSSPP/Flycast as RetroArch cores, and nightly libretro cores.
+- Approved for the main build: the built-in controller helper, PPSSPP/Flycast as RetroArch cores, nightly libretro cores, and the extra packages. The other differences in `prototype/README.md` (Timeshift folder, weather source, Hotspot tile, menu sound, window corners) are still open.
+- `SPEC.md` updated (with Elijah's OK): flashing now goes through a spare SD card, and the Pico also reads the battery voltage.
 
 ## Decisions made
 
@@ -26,6 +27,10 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 | Battery level | The Pico will read battery voltage as well as the lid sensor (Phase 6) |
 | Repo | Public, so GitHub Actions minutes are free |
 | Branding | Armbian `VENDOR` is set to `NEXUS-OS`; hostname is `nexus` |
+| Controller mouse mode | Built-in helper `nexus-pad` instead of AntiMicroX (no ARM build). Approved 2026-10-02 |
+| PSP and Dreamcast | PPSSPP and Flycast as RetroArch cores (standalone apps not in Debian 13 for ARM). Approved 2026-10-02 |
+| Emulator cores | libretro nightly builds for ARM (no stable ARM builds exist). Approved 2026-10-02 |
+| Extra packages | The extra packages listed in `prototype/README.md` (Samba, ufw, light-locker, etc.). Approved 2026-10-02 |
 
 ## What changed
 
@@ -48,7 +53,6 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - Armbian clones its desktop definitions (`armbian/configng`) from its `main` branch during the build, so that part isn't pinned. If a build suddenly breaks without us changing anything, this is a likely cause.
 - Wi-Fi/Bluetooth chip (AIC8800) on the mainline kernel comes from an Armbian extension. Might be less solid than on the vendor kernel.
 - The board might prefer a bootloader already on the eMMC over the SD card.
-- `SPEC.md` still says "flash to the eMMC with balenaEtcher". This needs updating to the SD-card route (waiting for Elijah's OK to edit `SPEC.md`).
 
 ## Needs device test
 

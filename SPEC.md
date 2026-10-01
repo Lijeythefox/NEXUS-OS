@@ -22,7 +22,7 @@ How the image gets made:
 1. A GitHub repository (`nexus-os`) holds the recipe: a board setting, a package list, theme files, configs and a setup script.
 2. Pushing a change triggers GitHub Actions, which runs the Armbian build in the cloud for free.
 3. The finished `.img` file appears under the repo's **Actions** tab (or **Releases**) to download on Windows.
-4. Flash it to the eMMC with balenaEtcher or Raspberry Pi Imager, boot, done.
+4. Flash it to a spare micro SD card with balenaEtcher or Raspberry Pi Imager, boot the deck from it, then copy the system onto the eMMC with `armbian-install` (the eMMC is soldered on, so Windows can't write to it directly). Step by step in `docs/FLASHING.md`.
 
 Repository layout:
 
@@ -76,7 +76,7 @@ A Windows-style desktop that works equally well with touch, keyboard/trackpad an
 - **On-screen keyboard:** Onboard, off by default, with a keyboard button on the taskbar to bring it up.
 - **Controller as mouse:** AntiMicroX runs in the background. Hold Select + Start for 2 seconds to toggle mouse mode (left stick moves, A clicks, B right-clicks). In games, mouse mode is off.
 - **Touch:** tap to click, long-press to right-click, larger touch targets on the panel and menus.
-- **Lid sleep:** folding the screen arm closed puts it to sleep; opening it wakes it to the themed lock screen. Needs a magnet (hall) sensor in the hinge read by a small Raspberry Pi Pico over USB, since the Zero 3W has no GPIO. See Known limits.
+- **Lid sleep:** folding the screen arm closed puts it to sleep; opening it wakes it to the themed lock screen. Needs a magnet (hall) sensor in the hinge read by a small Raspberry Pi Pico over USB, since the Zero 3W has no GPIO. The same Pico also reads the battery voltage (the Zero 3W can't measure it), which feeds the battery widget, battery % and the low-battery alert. See Known limits.
 
 Keyboard shortcuts:
 

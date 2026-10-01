@@ -1,0 +1,277 @@
+#!/usr/bin/python3
+import json
+import os
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SD_MOUNT = Path("/mnt/sdcard")
+SD_LABEL = "NEXUS-SD"
+ROM_SYSTEMS = [
+    "nes", "snes", "gb", "gbc", "gba", "megadrive", "genesis", "mastersystem", "gamegear",
+    "arcade", "mame", "neogeo", "psx", "n64", "psp", "dreamcast", "bios",
+]
+FILE_FOLDERS = ["Documents", "Downloads", "Pictures/Screenshots", "Videos", "Music"]
+TIMESHIFT_CONFIG = Path("/etc/timeshift/timeshift.json")
+
+
+def sh(cmd, input_text=None, check=False):
+    result = subprocess.run(cmd, capture_output=True, text=True, input=input_text)
+    if check and result.returncode != 0:
+        raise RuntimeError((result.stderr or result.stdout).strip() or f"{cmd[0]} failed")
+    return result
+
+
+def caller():
+    uid = int(os.environ.get("PKEXEC_UID", os.getuid()))
+    return pwd.getpwuid(uid)
+
+
+def ssh(state):
+    if state == "on":
+        sh(["systemctl", "enable", "--now", "ssh"], check=True)
+    else:
+        sh(["systemctl", "disable", "--now", "ssh"], check=True)
+    return 0
+
+
+def firewall(state):
+    if state == "on":
+        sh(["ufw", "--force", "enable"], check=True)
+    else:
+        sh(["ufw", "--force", "disable"], check=True)
+    return 0
+
+
+def share(state):
+    if state == "on":
+        sh(["systemctl", "enable", "--now", "smbd"], check=True)
+    else:
+        sh(["systemctl", "disable", "--now", "smbd"], check=True)
+    return 0
+
+
+def read_secret():
+    secret = sys.stdin.readline().rstrip("\n")
+    if len(secret) < 4:
+        raise RuntimeError("Password must be at least 4 characters")
+    return secret
+
+
+def share_password():
+    user = caller().pw_name
+    secret = read_secret()
+    sh(["smbpasswd", "-s", "-a", user], input_text=f"{secret}\n{secret}\n", check=True)
+    sh(["smbpasswd", "-e", user])
+    return 0
+
+
+def set_password():
+    user = caller().pw_name
+    secret = read_secret()
+    sh(["chpasswd"], input_text=f"{user}:{secret}\n", check=True)
+    return 0
+
+
+def tailscale_operator():
+    sh(["tailscale", "set", f"--operator={caller().pw_name}"], check=True)
+    return 0
+
+
+def root_disk():
+    source = sh(["findmnt", "-n", "-o", "SOURCE", "/"]).stdout.strip()
+    parent = sh(["lsblk", "-no", "PKNAME", source]).stdout.strip()
+    return f"/dev/{parent}" if parent else source
+
+
+def sd_format(device):
+    if not re.fullmatch(r"/dev/(mmcblk\d+|sd[a-z])", device):
+        raise RuntimeError(f"{device} is not a card or USB drive")
+    if device == root_disk():
+        raise RuntimeError("Refusing to erase the disk the system is running from")
+    for part in sh(["lsblk", "-nlo", "PATH", device]).stdout.split():
+        sh(["umount", part])
+    sh(["umount", str(SD_MOUNT)])
+    sh(["wipefs", "-a", device], check=True)
+    sh(["sfdisk", "--wipe", "always", device], input_text="label: gpt\n,,L\n", check=True)
+    sh(["udevadm", "settle"])
+    time.sleep(1)
+    part = device + ("p1" if device[-1].isdigit() else "1")
+    sh(["mkfs.ext4", "-F", "-L", SD_LABEL, part], check=True)
+    sh(["udevadm", "settle"])
+    SD_MOUNT.mkdir(parents=True, exist_ok=True)
+    sh(["mount", str(SD_MOUNT)], check=True)
+    return sd_setup()
+
+
+def sd_setup():
+    if not os.path.ismount(SD_MOUNT):
+        sh(["mount", str(SD_MOUNT)])
+    if not os.path.ismount(SD_MOUNT):
+        raise RuntimeError("The micro SD card is not mounted. Is it formatted as NEXUS-SD?")
+    user = caller()
+    for system in ROM_SYSTEMS:
+        (SD_MOUNT / "ROMs" / system).mkdir(parents=True, exist_ok=True)
+    for folder in FILE_FOLDERS:
+        (SD_MOUNT / "Files" / folder).mkdir(parents=True, exist_ok=True)
+    (SD_MOUNT / "Minecraft" / "instances").mkdir(parents=True, exist_ok=True)
+    (SD_MOUNT / "timeshift").mkdir(parents=True, exist_ok=True)
+    snapshots = SD_MOUNT / "Snapshots"
+    if not snapshots.exists():
+        snapshots.symlink_to("timeshift")
+    for folder in ("ROMs", "Files", "Minecraft"):
+        sh(["chown", "-R", f"{user.pw_uid}:{user.pw_gid}", str(SD_MOUNT / folder)])
+    configure_timeshift()
+    sh(["systemctl", "try-restart", "smbd"])
+    return 0
+
+
+def configure_timeshift():
+    source = sh(["findmnt", "-n", "-o", "SOURCE", str(SD_MOUNT)]).stdout.strip()
+    uuid = sh(["blkid", "-s", "UUID", "-o", "value", source]).stdout.strip()
+    if not uuid:
+        return
+    config = {
+        "backup_device_uuid": uuid,
+        "parent_device_uuid": "",
+        "do_first_run": "false",
+        "btrfs_mode": "false",
+        "include_btrfs_home_for_backup": "false",
+        "include_btrfs_home_for_restore": "false",
+        "stop_cron_emails": "true",
+        "schedule_monthly": "false",
+        "schedule_weekly": "false",
+        "schedule_daily": "true",
+        "schedule_hourly": "false",
+        "schedule_boot": "false",
+        "count_monthly": "2",
+        "count_weekly": "3",
+        "count_daily": "5",
+        "count_hourly": "6",
+        "count_boot": "5",
+        "snapshot_size": "0",
+        "snapshot_count": "0",
+        "date_format": "%Y-%m-%d %H:%M:%S",
+        "exclude": ["/home/*/.cache/**", "/mnt/sdcard/**", "/var/cache/apt/archives/**"],
+        "exclude-apps": [],
+    }
+    TIMESHIFT_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    TIMESHIFT_CONFIG.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    sh(["timeshift", "--check", "--scripted"])
+
+
+def cleanup():
+    sh(["apt-get", "clean"])
+    sh(["apt-get", "-y", "autoremove", "--purge"])
+    sh(["journalctl", "--vacuum-size=50M"])
+    return 0
+
+
+def update_check():
+    result = sh(["apt-get", "update"])
+    if result.returncode != 0:
+        print(result.stderr.strip(), file=sys.stderr)
+        return 1
+    listing = sh(["apt", "list", "--upgradable"]).stdout.splitlines()
+    packages = [line.split("/")[0] for line in listing if "/" in line]
+    print(json.dumps({"count": len(packages), "packages": packages}))
+    return 0
+
+
+def snapshot_create(comment="Manual snapshot"):
+    if not TIMESHIFT_CONFIG.exists():
+        raise RuntimeError("Snapshots need the micro SD card. Set it up in Settings > System > Storage first.")
+    result = sh(["timeshift", "--create", "--scripted", "--comments", comment])
+    print(result.stdout.strip())
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "Snapshot failed")
+    return 0
+
+
+def snapshot_list():
+    if not TIMESHIFT_CONFIG.exists():
+        print("[]")
+        return 0
+    result = sh(["timeshift", "--list", "--scripted"])
+    snapshots = []
+    for line in result.stdout.splitlines():
+        match = re.match(r"^\s*\d+\s+>\s+(\S+)\s+(\S*)\s*(.*)$", line)
+        if match:
+            snapshots.append({"name": match.group(1), "tags": match.group(2), "comment": match.group(3).strip()})
+    print(json.dumps(snapshots))
+    return 0
+
+
+def update_install():
+    if TIMESHIFT_CONFIG.exists():
+        sh(["timeshift", "--create", "--scripted", "--comments", "Before update"])
+    environment = dict(os.environ, DEBIAN_FRONTEND="noninteractive")
+    result = subprocess.run(
+        ["apt-get", "-y", "-o", "Dpkg::Options::=--force-confold", "upgrade"],
+        capture_output=True, text=True, env=environment,
+    )
+    print(result.stdout[-3000:])
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip()[-1000:] or "Update failed")
+    return 0
+
+
+def uninstall(package):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9+.-]+", package):
+        raise RuntimeError("Invalid package name")
+    protected = {"xfce4-session", "xfwm4", "xfce4-panel", "lightdm", "network-manager", "python3", "systemd", "sudo"}
+    if package in protected:
+        raise RuntimeError(f"{package} is part of the core system and can't be removed here")
+    environment = dict(os.environ, DEBIAN_FRONTEND="noninteractive")
+    result = subprocess.run(["apt-get", "-y", "remove", package], capture_output=True, text=True, env=environment)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip()[-800:] or "Uninstall failed")
+    return 0
+
+
+def calibration():
+    text = sys.stdin.read()
+    if "Section" not in text:
+        raise RuntimeError("No calibration data received")
+    path = Path("/etc/X11/xorg.conf.d/99-nexus-calibration.conf")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return 0
+
+
+COMMANDS = {
+    "ssh": lambda args: ssh(args[0]),
+    "firewall": lambda args: firewall(args[0]),
+    "share": lambda args: share(args[0]),
+    "share-password": lambda args: share_password(),
+    "set-password": lambda args: set_password(),
+    "tailscale-operator": lambda args: tailscale_operator(),
+    "sd-format": lambda args: sd_format(args[0]),
+    "sd-setup": lambda args: sd_setup(),
+    "cleanup": lambda args: cleanup(),
+    "update-check": lambda args: update_check(),
+    "update-install": lambda args: update_install(),
+    "snapshot-create": lambda args: snapshot_create(" ".join(args) or "Manual snapshot"),
+    "snapshot-list": lambda args: snapshot_list(),
+    "uninstall": lambda args: uninstall(args[0]),
+    "calibration": lambda args: calibration(),
+}
+
+
+def main(argv):
+    if not argv or argv[0] not in COMMANDS:
+        print("usage: nexus-root " + "|".join(COMMANDS), file=sys.stderr)
+        return 2
+    try:
+        return COMMANDS[argv[0]](argv[1:])
+    except (RuntimeError, IndexError, OSError) as error:
+        print(str(error) or "Missing argument", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

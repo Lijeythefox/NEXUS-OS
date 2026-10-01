@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Quick Settings
+Comment=Wi-Fi, Bluetooth, volume, brightness and colour preset at a glance
+Exec=nexus-quick-settings
+Icon=nexus-quick-settings
+Terminal=false
+Categories=Settings;

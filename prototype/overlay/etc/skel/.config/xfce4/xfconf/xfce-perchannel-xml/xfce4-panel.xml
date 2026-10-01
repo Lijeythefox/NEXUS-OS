@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <property name="dark-mode" type="bool" value="true"/>
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=10;x=0;y=0"/>
+      <property name="length" type="double" value="100"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="48"/>
+      <property name="icon-size" type="uint" value="32"/>
+      <property name="autohide-behavior" type="uint" value="0"/>
+      <property name="enter-opacity" type="uint" value="100"/>
+      <property name="leave-opacity" type="uint" value="100"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="2"/>
+        <value type="int" value="3"/>
+        <value type="int" value="4"/>
+        <value type="int" value="5"/>
+        <value type="int" value="6"/>
+        <value type="int" value="7"/>
+        <value type="int" value="8"/>
+      </property>
+    </property>
+  </property>
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="whiskermenu">
+      <property name="button-icon" type="string" value="nexus-start"/>
+      <property name="button-title" type="string" value="NEXUS"/>
+      <property name="show-button-title" type="bool" value="true"/>
+      <property name="show-button-icon" type="bool" value="true"/>
+      <property name="launcher-show-name" type="bool" value="true"/>
+      <property name="launcher-show-description" type="bool" value="false"/>
+      <property name="item-icon-size" type="int" value="3"/>
+      <property name="category-icon-size" type="int" value="2"/>
+      <property name="menu-width" type="int" value="560"/>
+      <property name="menu-height" type="int" value="500"/>
+      <property name="position-search-alternate" type="bool" value="true"/>
+      <property name="position-commands-alternate" type="bool" value="false"/>
+      <property name="default-category" type="int" value="0"/>
+      <property name="command-settings" type="string" value="nexus-settings"/>
+      <property name="show-command-settings" type="bool" value="true"/>
+      <property name="command-lockscreen" type="string" value="nexus-lock"/>
+      <property name="show-command-lockscreen" type="bool" value="true"/>
+      <property name="command-logout" type="string" value="xfce4-session-logout"/>
+      <property name="show-command-logout" type="bool" value="true"/>
+      <property name="favorites" type="array">
+        <value type="string" value="nexus-settings.desktop"/>
+        <value type="string" value="chromium.desktop"/>
+        <value type="string" value="thunar.desktop"/>
+        <value type="string" value="xfce4-terminal.desktop"/>
+        <value type="string" value="org.xfce.mousepad.desktop"/>
+        <value type="string" value="mate-calc.desktop"/>
+        <value type="string" value="com.github.maoschanz.drawing.desktop"/>
+        <value type="string" value="viewnior.desktop"/>
+        <value type="string" value="libreoffice-startcenter.desktop"/>
+        <value type="string" value="code.desktop"/>
+        <value type="string" value="freetube.desktop"/>
+        <value type="string" value="legcord.desktop"/>
+        <value type="string" value="nexus-games.desktop"/>
+        <value type="string" value="prismlauncher.desktop"/>
+        <value type="string" value="nexus-ai.desktop"/>
+        <value type="string" value="org.thonny.Thonny.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-2" type="string" value="docklike"/>
+    <property name="plugin-3" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+    <property name="plugin-4" type="string" value="systray">
+      <property name="square-icons" type="bool" value="true"/>
+      <property name="icon-size" type="int" value="24"/>
+    </property>
+    <property name="plugin-5" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="nexus-osk.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-6" type="string" value="genmon">
+      <property name="command" type="string" value="nexus-info status-bar"/>
+      <property name="use-label" type="bool" value="false"/>
+      <property name="text" type="string" value=""/>
+      <property name="update-period" type="int" value="3000"/>
+      <property name="font" type="string" value="Share Tech Mono 11"/>
+    </property>
+    <property name="plugin-7" type="string" value="clock">
+      <property name="mode" type="uint" value="2"/>
+      <property name="digital-layout" type="uint" value="1"/>
+      <property name="digital-time-format" type="string" value="%H:%M"/>
+      <property name="digital-date-format" type="string" value="%d %b %Y"/>
+      <property name="digital-time-font" type="string" value="Share Tech Mono 12"/>
+      <property name="digital-date-font" type="string" value="Share Tech Mono 9"/>
+    </property>
+    <property name="plugin-8" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="nexus-quick-settings.desktop"/>
+      </property>
+    </property>
+  </property>
+</channel>

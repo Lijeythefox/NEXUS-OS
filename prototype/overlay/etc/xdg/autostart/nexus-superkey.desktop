@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS Super key
+Comment=Tapping Super alone opens the start menu
+Exec=xcape -e "Super_L=Alt_L|F1"
+Icon=nexus-start
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

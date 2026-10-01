@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS notification sounds
+Comment=Plays the tactical beep when a notification arrives
+Exec=nexus-sound-daemon
+Icon=nexus-settings
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

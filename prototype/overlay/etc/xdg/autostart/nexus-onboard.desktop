@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS on-screen keyboard
+Comment=Starts Onboard hidden so Super + K can show it instantly
+Exec=onboard --startup-delay=3
+Icon=nexus-keyboard
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

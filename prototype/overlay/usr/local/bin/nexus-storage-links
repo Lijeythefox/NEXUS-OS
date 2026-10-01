@@ -1,0 +1,40 @@
+#!/bin/bash
+sd=/mnt/sdcard
+mountpoint -q "$sd" || exit 0
+[[ -w "$sd/Files" ]] || exit 0
+
+link_dir() {
+	local name="$1"
+	local target="$sd/Files/$name"
+	local home_dir="$HOME/$name"
+	mkdir -p "$target" 2>/dev/null || return
+	[[ -L "$home_dir" ]] && return
+	if [[ -d "$home_dir" ]]; then
+		find "$home_dir" -depth -type d -empty -delete 2>/dev/null
+	fi
+	[[ -e "$home_dir" ]] || ln -s "$target" "$home_dir"
+}
+
+for name in Documents Downloads Pictures Videos Music; do
+	link_dir "$name"
+done
+mkdir -p "$sd/Files/Pictures/Screenshots"
+
+if [[ -w "$sd/Minecraft" ]]; then
+	instances="$sd/Minecraft/instances"
+	mkdir -p "$instances"
+	prism="$HOME/.local/share/PrismLauncher"
+	cfg="$prism/prismlauncher.cfg"
+	mkdir -p "$prism"
+	[[ -f "$cfg" ]] || printf '[General]\n' >"$cfg"
+	if grep -q '^InstanceDir=' "$cfg"; then
+		sed -i "s|^InstanceDir=.*|InstanceDir=$instances|" "$cfg"
+	else
+		sed -i "/^\[General\]/a InstanceDir=$instances" "$cfg"
+	fi
+	template=/usr/share/nexus/minecraft/NEXUS-Fabric
+	if [[ -d "$template" && ! -e "$instances/NEXUS-Fabric" ]]; then
+		cp -r "$template" "$instances/NEXUS-Fabric"
+	fi
+fi
+exit 0

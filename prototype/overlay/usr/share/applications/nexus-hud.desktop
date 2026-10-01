@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=HUD widgets
+Comment=Show or hide the HUD widgets
+Exec=nexus-hud toggle
+Icon=nexus-hud
+Terminal=false
+Categories=Utility;

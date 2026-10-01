@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Minecraft
+GenericName=Prism Launcher
+Comment=Minecraft with Fabric and Sodium
+Exec=nexus-prism
+Icon=nexus-minecraft
+Terminal=false
+Categories=Game;
+Keywords=minecraft;prism;launcher;

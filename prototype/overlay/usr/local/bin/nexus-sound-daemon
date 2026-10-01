@@ -1,0 +1,14 @@
+#!/bin/bash
+last=0
+dbus-monitor --session "type='method_call',interface='org.freedesktop.Notifications',member='Notify'" 2>/dev/null |
+	while read -r line; do
+		case "$line" in
+		*member=Notify*)
+			now="$(date +%s)"
+			if ((now - last >= 1)); then
+				last="$now"
+				nexus-sound notify
+			fi
+			;;
+		esac
+	done

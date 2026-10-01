@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<string name="ROMDirectory" value="/mnt/sdcard/ROMs" />
+<string name="MediaDirectory" value="/mnt/sdcard/ROMs/media" />
+<bool name="ShowQuitMenu" value="true" />
+<bool name="ScraperRegionFallback" value="true" />
+<string name="ThemeVariant" value="" />

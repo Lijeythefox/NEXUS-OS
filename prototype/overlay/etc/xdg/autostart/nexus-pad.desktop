@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS controller mouse mode
+Comment=Hold Select + Start for 2 seconds to use the controller as a mouse
+Exec=nexus-pad
+Icon=nexus-gamepad
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

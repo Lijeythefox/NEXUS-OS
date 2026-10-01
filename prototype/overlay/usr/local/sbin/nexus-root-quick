@@ -1,0 +1,157 @@
+#!/usr/bin/python3
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "/opt/nexus/lib")
+
+from nexus.common import CALLSIGN_FILE, LOGIN_IMAGE, PRESET_DIR, SYSTEM_PRESET_FILE, callsign, read_text
+from nexus.presets import active_key, load_preset
+
+GREETER_CONF = Path("/etc/lightdm/lightdm-gtk-greeter.conf")
+ARMBIAN_ENV = Path("/boot/armbianEnv.txt")
+GOVERNORS = {"balanced": "schedutil", "performance": "performance", "powersave": "powersave"}
+
+
+def run(cmd):
+    return subprocess.run(cmd, capture_output=True, text=True).returncode == 0
+
+
+def rebuild_initramfs():
+    subprocess.run(
+        ["systemd-run", "--unit", "nexus-initramfs", "--collect", "--no-block", "update-initramfs", "-u"],
+        capture_output=True,
+    )
+
+
+def write_greeter(preset):
+    GREETER_CONF.write_text(
+        "\n".join([
+            "[greeter]",
+            f"theme-name={preset.theme_name}",
+            f"icon-theme-name={preset.theme_name}",
+            "font-name=Share Tech Mono 12",
+            f"background={LOGIN_IMAGE}",
+            "user-background=false",
+            "hide-user-image=true",
+            "clock-format=%H:%M   %d %b %Y",
+            "indicators=~host;~spacer;~clock;~spacer;~a11y;~power",
+            "position=50%,center 64%,center",
+            "xft-antialias=true",
+            "xft-hintstyle=hintslight",
+            "",
+        ]),
+        encoding="utf-8",
+    )
+
+
+def render_login(preset):
+    LOGIN_IMAGE.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [sys.executable, "-m", "nexus.assets", "login", "--preset", preset.key, "--callsign", callsign(),
+         "--out", str(LOGIN_IMAGE)],
+        env={"PYTHONPATH": "/opt/nexus/lib", "PATH": "/usr/bin:/bin"},
+        check=False,
+    )
+
+
+def set_plymouth(preset):
+    theme = f"nexus-{preset.key}"
+    if Path(f"/usr/share/plymouth/themes/{theme}").is_dir():
+        run(["plymouth-set-default-theme", theme])
+        rebuild_initramfs()
+
+
+def apply_preset(key):
+    if not re.fullmatch(r"[a-z0-9_-]+", key) or not (PRESET_DIR / f"{key}.conf").exists():
+        print(f"Unknown preset: {key}", file=sys.stderr)
+        return 1
+    preset = load_preset(key)
+    SYSTEM_PRESET_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SYSTEM_PRESET_FILE.write_text(key + "\n", encoding="utf-8")
+    write_greeter(preset)
+    render_login(preset)
+    set_plymouth(preset)
+    return 0
+
+
+def set_callsign(text):
+    clean = re.sub(r"[^A-Z0-9 _-]", "", text.upper()).strip()[:16]
+    if not clean:
+        print("Callsign must contain letters or numbers", file=sys.stderr)
+        return 1
+    CALLSIGN_FILE.write_text(clean + "\n", encoding="utf-8")
+    preset = load_preset(active_key())
+    render_login(preset)
+    subprocess.run(
+        [sys.executable, "-m", "nexus.assets", "plymouth", "--callsign", clean, "--root", "/"],
+        env={"PYTHONPATH": "/opt/nexus/lib", "PATH": "/usr/bin:/bin"},
+        check=False,
+    )
+    rebuild_initramfs()
+    return 0
+
+
+def set_env_value(key, value):
+    if not ARMBIAN_ENV.exists():
+        return False
+    lines = ARMBIAN_ENV.read_text(encoding="utf-8").splitlines()
+    found = False
+    for index, line in enumerate(lines):
+        if line.startswith(f"{key}="):
+            lines[index] = f"{key}={value}"
+            found = True
+    if not found:
+        lines.append(f"{key}={value}")
+    ARMBIAN_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True
+
+
+def bootlogo(state):
+    if state not in ("on", "off"):
+        return 2
+    return 0 if set_env_value("bootlogo", "true" if state == "on" else "false") else 1
+
+
+def governor(mode, persist=False):
+    target = GOVERNORS.get(mode)
+    if not target:
+        return 2
+    for path in Path("/sys/devices/system/cpu").glob("cpufreq/policy*/scaling_governor"):
+        available = read_text(path.parent / "scaling_available_governors").split()
+        choice = target if target in available else ("ondemand" if "ondemand" in available else available[0] if available else "")
+        if choice:
+            try:
+                path.write_text(choice)
+            except OSError:
+                pass
+    if persist:
+        defaults = Path("/etc/default/cpufrequtils")
+        text = defaults.read_text(encoding="utf-8") if defaults.exists() else "ENABLE=true\n"
+        lines = [line for line in text.splitlines() if not line.startswith("GOVERNOR=")]
+        lines.append(f"GOVERNOR={target}")
+        defaults.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return 0
+
+
+def main(argv):
+    if len(argv) < 2:
+        print("usage: nexus-root-quick preset NAME | callsign TEXT | bootlogo on|off | governor MODE", file=sys.stderr)
+        return 2
+    command, value = argv[0], " ".join(argv[1:])
+    if command == "preset":
+        return apply_preset(value)
+    if command == "callsign":
+        return set_callsign(value)
+    if command == "bootlogo":
+        return bootlogo(value)
+    if command == "governor":
+        return governor(value)
+    if command == "governor-default":
+        return governor(value, persist=True)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

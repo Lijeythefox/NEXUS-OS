@@ -1,0 +1,3 @@
+#!/bin/bash
+nexus-mousemode off >/dev/null 2>&1
+exec /opt/nexus/apps/es-de/AppRun "$@"

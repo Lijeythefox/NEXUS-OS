@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS session setup
+Comment=Applies the colour preset, HUD, display and input settings at login
+Exec=nexus-session
+Icon=nexus-settings
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+NoDisplay=false

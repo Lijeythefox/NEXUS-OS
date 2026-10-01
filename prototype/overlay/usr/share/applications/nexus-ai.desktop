@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AI Assistant
+GenericName=Open WebUI
+Comment=Chat with the AI model on the home PC (over Tailscale)
+Exec=nexus-ai
+Icon=nexus-ai
+Terminal=false
+StartupWMClass=NexusAI
+Categories=Network;Utility;
+Keywords=ai;ollama;openwebui;chat;

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=On-screen keyboard
+Comment=Show or hide the on-screen keyboard
+Exec=nexus-osk
+Icon=nexus-keyboard
+Terminal=false
+Categories=Utility;Accessibility;

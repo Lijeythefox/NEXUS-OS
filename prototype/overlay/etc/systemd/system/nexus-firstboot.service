@@ -1,0 +1,12 @@
+[Unit]
+Description=NEXUS OS first boot setup
+After=local-fs.target network.target
+ConditionPathExists=!/var/lib/nexus/firstboot.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nexus-firstboot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,209 @@
+name: Build NEXUS OS prototype
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "prototype/**"
+      - ".github/workflows/build-prototype.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: build-prototype-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ARMBIAN_REF: v26.5.1
+  RELEASE: trixie
+  DESKTOP_ENVIRONMENT: xfce
+  DESKTOP_TIER: minimal
+  PROTO: prototype
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out NEXUS OS
+        uses: actions/checkout@v5
+
+      - name: Install checkers
+        run: sudo apt-get update && sudo apt-get install -y lua5.4 libxml2-utils shellcheck
+
+      - name: Check Python files
+        run: |
+          set -e
+          mapfile -t files < <(find "$PROTO" -name '*.py'; grep -rlI '^#!/usr/bin/python3' "$PROTO/overlay/usr/local")
+          for file in "${files[@]}"; do
+            python3 -c "import ast, sys; ast.parse(open(sys.argv[1], encoding='utf-8').read(), sys.argv[1])" "$file"
+          done
+          echo "Checked ${#files[@]} Python files"
+
+      - name: Check shell scripts
+        run: |
+          set -e
+          mapfile -t files < <(grep -rlI '^#!/bin/bash' "$PROTO")
+          for file in "${files[@]}"; do
+            bash -n "$file"
+          done
+          shellcheck -S error "${files[@]}"
+          echo "Checked ${#files[@]} shell scripts"
+
+      - name: Check Lua and XML files
+        run: |
+          set -e
+          for file in "$PROTO"/overlay/usr/share/nexus/conky/*.lua "$PROTO"/overlay/etc/skel/.config/conky/*.conf; do
+            luac5.4 -p "$file"
+          done
+          find "$PROTO/overlay" -name '*.xml' -not -path '*/ES-DE/*' -print0 | xargs -0 -n1 xmllint --noout
+          xmllint --noout "$PROTO/overlay/usr/share/polkit-1/actions/org.nexus.policy"
+
+      - name: Check generated themes
+        run: |
+          set -e
+          sudo apt-get install -y librsvg2-bin papirus-icon-theme
+          export PYTHONPATH="$PROTO/overlay/opt/nexus/lib"
+          export NEXUS_PRESET_DIR="$PROTO/overlay/usr/share/nexus/presets"
+          python3 -m nexus.assets build --root /tmp/assets-check --callsign CHECK
+          find /tmp/assets-check -maxdepth 4 -type d | head -40
+          test -s /tmp/assets-check/var/lib/nexus/login.png
+          test -s /tmp/assets-check/usr/share/themes/NEXUS-Amber/gtk-3.0/gtk.css
+
+  build:
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 345
+
+    steps:
+      - name: Free disk space on the runner
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/share/swift \
+            /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules
+          sudo docker image prune --all --force || true
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile /swapfile || true
+          sudo apt-get clean
+          df -h /
+
+      - name: Check out NEXUS OS
+        uses: actions/checkout@v5
+
+      - name: Read board settings
+        run: |
+          sed -i 's/\r$//' "$PROTO/config/board.conf"
+          source "$PROTO/config/board.conf"
+          if [[ -z "${BOARD:-}" || -z "${BRANCH:-}" ]]; then
+            echo "::error::$PROTO/config/board.conf must set BOARD and BRANCH"
+            exit 1
+          fi
+          {
+            echo "BOARD=$BOARD"
+            echo "BRANCH=$BRANCH"
+            echo "NEXUS_VERSION=proto-$(date -u +%Y%m%d)-${GITHUB_SHA::7}"
+          } >> "$GITHUB_ENV"
+
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin papirus-icon-theme squashfs-tools unzip fontconfig gnupg curl
+
+      - name: Check out Armbian build framework
+        uses: actions/checkout@v5
+        with:
+          repository: armbian/build
+          ref: ${{ env.ARMBIAN_REF }}
+          path: build
+
+      - name: Download apps, emulator cores, fonts and keys
+        run: |
+          staging=build/userpatches/overlay/.nexus-build
+          mkdir -p "$staging"
+          bash "$PROTO/tools/fetch-downloads.sh" "$PROTO/config/downloads.txt" "$staging/downloads"
+          mkdir -p ~/.local/share/fonts
+          cp "$staging"/downloads/fonts/*.ttf ~/.local/share/fonts/
+          fc-cache -f
+
+      - name: Stage NEXUS files into the Armbian build
+        run: |
+          staging=build/userpatches/overlay/.nexus-build
+          cp -r "$PROTO/userpatches/." build/userpatches/
+          chmod +x build/userpatches/customize-image.sh
+          cp -r "$PROTO/overlay/." build/userpatches/overlay/
+          cp "$PROTO/config/packages.txt" "$staging/packages.txt"
+          echo "$NEXUS_VERSION" > "$staging/version"
+
+      - name: Generate themes, icons, wallpapers, boot animation and sounds
+        run: |
+          export PYTHONPATH="$PROTO/overlay/opt/nexus/lib"
+          export NEXUS_PRESET_DIR="$PROTO/overlay/usr/share/nexus/presets"
+          python3 -m nexus.assets build --root build/userpatches/overlay \
+            --callsign "$(tr -d '\r\n' < "$PROTO/overlay/etc/nexus/callsign")" \
+            --default "$(tr -d '\r\n' < "$PROTO/overlay/etc/nexus/preset")"
+          du -sh build/userpatches/overlay/usr/share/* || true
+
+      - name: Prepare the tuned Minecraft instance
+        continue-on-error: true
+        run: python3 "$PROTO/tools/minecraft-template.py" build/userpatches/overlay/usr/share/nexus/minecraft/NEXUS-Fabric
+
+      - name: Install Armbian build requirements
+        working-directory: build
+        run: |
+          sudo ./compile.sh requirements
+          sudo chown -R "$USER:$USER" .
+
+      - name: Build image
+        working-directory: build
+        run: |
+          ./compile.sh build \
+            BOARD="$BOARD" \
+            BRANCH="$BRANCH" \
+            RELEASE="$RELEASE" \
+            BUILD_MINIMAL=no \
+            BUILD_DESKTOP=yes \
+            DESKTOP_ENVIRONMENT="$DESKTOP_ENVIRONMENT" \
+            DESKTOP_TIER="$DESKTOP_TIER" \
+            KERNEL_CONFIGURE=no \
+            COMPRESS_OUTPUTIMAGE=sha,xz \
+            VENDOR="NEXUS-OS" \
+            VENDORURL="https://github.com/${{ github.repository }}" \
+            VENDORSUPPORT="https://github.com/${{ github.repository }}/issues" \
+            VENDORBUGS="https://github.com/${{ github.repository }}/issues" \
+            EXPERT=yes
+
+      - name: Rename image
+        run: |
+          mkdir -p dist
+          shopt -s nullglob
+          images=(build/output/images/*.img.xz)
+          if (( ${#images[@]} != 1 )); then
+            echo "::error::Expected exactly one .img.xz image, found ${#images[@]}"
+            ls -l build/output/images || true
+            exit 1
+          fi
+          name="NEXUS-OS-prototype_${NEXUS_VERSION}_${BOARD}.img.xz"
+          sudo mv "${images[0]}" "dist/$name"
+          sudo chown "$USER:$USER" "dist/$name"
+          (cd dist && sha256sum "$name" > "$name.sha256")
+          ls -lh dist
+
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-OS-prototype_${{ env.NEXUS_VERSION }}_${{ env.BOARD }}
+          path: dist/*
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prototype-build-logs
+          path: build/output/logs/
+          if-no-files-found: ignore
+          retention-days: 14

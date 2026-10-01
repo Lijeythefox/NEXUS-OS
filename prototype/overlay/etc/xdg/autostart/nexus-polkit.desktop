@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS password prompt
+Comment=Shows the password box when a setting needs admin rights
+Exec=/usr/libexec/polkit-mate-authentication-agent-1
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

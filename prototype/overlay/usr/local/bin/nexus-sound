@@ -1,0 +1,33 @@
+#!/bin/bash
+event="${1:-test}"
+settings="$HOME/.config/nexus/settings.conf"
+
+setting() {
+	[[ -f "$settings" ]] && grep -m1 "^$1=" "$settings" | cut -d= -f2-
+}
+
+pack="$(setting SOUND_THEME)"
+pack="${pack:-preset}"
+if [[ "$pack" == "preset" ]]; then
+	preset="$(cat /etc/nexus/preset 2>/dev/null)"
+	preset="${preset:-amber}"
+	pack="$(grep -m1 '^SOUND_PACK=' "/usr/share/nexus/presets/$preset.conf" 2>/dev/null | cut -d= -f2-)"
+	pack="${pack:-tactical}"
+fi
+[[ "$pack" == "off" ]] && exit 0
+
+if [[ "$event" == "notify" ]]; then
+	[[ "$(setting NOTIFY_SOUND)" == "0" ]] && exit 0
+	[[ "$(xfconf-query -c xfce4-notifyd -p /do-not-disturb 2>/dev/null)" == "true" ]] && exit 0
+fi
+
+file="/usr/share/sounds/nexus-$pack/stereo/$event.wav"
+[[ -f "$file" ]] || exit 0
+
+if command -v pw-play >/dev/null 2>&1; then
+	setsid -f pw-play "$file" >/dev/null 2>&1
+elif command -v paplay >/dev/null 2>&1; then
+	setsid -f paplay "$file" >/dev/null 2>&1
+else
+	setsid -f aplay -q "$file" >/dev/null 2>&1
+fi

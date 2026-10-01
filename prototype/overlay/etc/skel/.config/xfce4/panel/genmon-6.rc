@@ -1,0 +1,5 @@
+Command=nexus-info status-bar
+UseLabel=0
+Text=
+UpdatePeriod=3000
+Font=Share Tech Mono 11

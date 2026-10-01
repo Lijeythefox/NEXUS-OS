@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Games
+GenericName=ES-DE game launcher
+Comment=Retro games from the micro SD card, controller friendly
+Exec=nexus-games
+Icon=nexus-games
+Terminal=false
+Categories=Game;Emulator;
+Keywords=es-de;emulationstation;retro;emulator;roms;

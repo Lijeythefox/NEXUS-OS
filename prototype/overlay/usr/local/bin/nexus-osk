@@ -1,0 +1,23 @@
+#!/bin/bash
+call() {
+	gdbus call --session --dest org.onboard.Onboard \
+		--object-path /org/onboard/Onboard/Keyboard \
+		--method "org.onboard.Onboard.Keyboard.$1" >/dev/null 2>&1
+}
+
+action="${1:-toggle}"
+
+if ! pgrep -x onboard >/dev/null; then
+	setsid -f onboard >/dev/null 2>&1
+	for _ in $(seq 1 30); do
+		sleep 0.2
+		call Show && exit 0
+	done
+	exit 1
+fi
+
+case "$action" in
+show) call Show ;;
+hide) call Hide ;;
+*) call ToggleVisible ;;
+esac

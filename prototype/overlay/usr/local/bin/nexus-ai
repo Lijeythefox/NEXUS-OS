@@ -1,0 +1,5 @@
+#!/bin/bash
+settings="$HOME/.config/nexus/settings.conf"
+url="$(grep -m1 '^OPENWEBUI_URL=' "$settings" 2>/dev/null | cut -d= -f2-)"
+url="${url:-$(grep -m1 '^OPENWEBUI_URL=' /usr/share/nexus/defaults/settings.conf | cut -d= -f2-)}"
+exec chromium --app="$url" --class=NexusAI

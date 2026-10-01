@@ -1,0 +1,3 @@
+#!/bin/bash
+nexus-sound menu-click
+exec xfce4-popup-whiskermenu "$@"

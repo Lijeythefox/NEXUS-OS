@@ -1,0 +1,32 @@
+#!/bin/bash
+shortcut() {
+	xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/$1" -n -t string -s "$2"
+}
+
+xfconf-query -c xfce4-keyboard-shortcuts -p /commands/custom/override -n -t bool -s true
+shortcut "<Alt>F1" "nexus-menu"
+shortcut "<Super>i" "nexus-settings"
+shortcut "<Super>a" "nexus-quick-settings"
+shortcut "<Super>h" "nexus-hud toggle"
+shortcut "<Super>g" "nexus-games"
+shortcut "<Super>t" "xfce4-terminal"
+shortcut "<Super>k" "nexus-osk"
+shortcut "<Super>l" "nexus-lock"
+shortcut "<Super>e" "thunar"
+shortcut "Print" "nexus-screenshot full"
+shortcut "<Shift><Super>s" "nexus-screenshot area"
+shortcut "<Primary><Shift>Escape" "xfce4-taskmanager"
+shortcut "XF86AudioRaiseVolume" "nexus-volume up"
+shortcut "XF86AudioLowerVolume" "nexus-volume down"
+shortcut "XF86AudioMute" "nexus-volume mute"
+
+gsettings set org.onboard.window docking-enabled true 2>/dev/null
+gsettings set org.onboard.window force-to-top true 2>/dev/null
+gsettings set org.onboard show-status-icon false 2>/dev/null
+gsettings set apps.light-locker lock-on-suspend true 2>/dev/null
+gsettings set apps.light-locker late-locking false 2>/dev/null
+gsettings set apps.light-locker lock-after-screensaver 'uint32 5' 2>/dev/null
+
+xdg-user-dirs-update 2>/dev/null
+mkdir -p "$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/Screenshots"
+exit 0

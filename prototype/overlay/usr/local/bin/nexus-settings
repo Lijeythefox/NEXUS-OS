@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+import sys
+
+sys.path[:0] = ["/opt/nexus/lib", "/opt/nexus/settings"]
+
+from nexus_settings.app import main
+
+sys.exit(main(sys.argv))

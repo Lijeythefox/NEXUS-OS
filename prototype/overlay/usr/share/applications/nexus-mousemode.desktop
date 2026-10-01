@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Controller mouse mode
+Comment=Use the controller as a mouse (or hold Select + Start)
+Exec=nexus-mousemode toggle
+Icon=nexus-mousemode
+Terminal=false
+Categories=Utility;

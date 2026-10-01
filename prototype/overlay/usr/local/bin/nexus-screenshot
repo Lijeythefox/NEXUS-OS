@@ -1,0 +1,20 @@
+#!/bin/bash
+mode="${1:-full}"
+pictures="$(xdg-user-dir PICTURES 2>/dev/null)"
+dir="${pictures:-$HOME/Pictures}/Screenshots"
+mkdir -p "$dir"
+marker="$(mktemp)"
+
+case "$mode" in
+area) xfce4-screenshooter -r -s "$dir" ;;
+window) xfce4-screenshooter -w -s "$dir" ;;
+*) xfce4-screenshooter -f -s "$dir" ;;
+esac
+
+file="$(find "$dir" -maxdepth 1 -type f -name '*.png' -newer "$marker" -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+rm -f "$marker"
+[[ -n "$file" ]] || exit 0
+
+nexus-sound screenshot
+xclip -selection clipboard -t image/png -i "$file" 2>/dev/null
+notify-send -a NEXUS -i "$file" "Screenshot saved" "Copied to clipboard. Saved in Pictures/Screenshots."

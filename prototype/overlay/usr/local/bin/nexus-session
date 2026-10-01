@@ -1,0 +1,21 @@
+#!/bin/bash
+cfg="$HOME/.config/nexus"
+defaults=/usr/share/nexus/defaults
+mkdir -p "$cfg"
+
+[[ -f "$cfg/hud.conf" ]] || cp "$defaults/hud.conf" "$cfg/hud.conf"
+touch "$cfg/settings.conf"
+while IFS='=' read -r key value; do
+	[[ -z "$key" || "$key" == \#* ]] && continue
+	grep -q "^$key=" "$cfg/settings.conf" || printf '%s=%s\n' "$key" "$value" >>"$cfg/settings.conf"
+done <"$defaults/settings.conf"
+
+if [[ ! -f "$cfg/.first-login-done" ]]; then
+	nexus-first-login && touch "$cfg/.first-login-done"
+fi
+
+nexus-storage-links
+nexus-theme apply
+nexus-apply all
+nexus-hud login
+nexus-sound startup

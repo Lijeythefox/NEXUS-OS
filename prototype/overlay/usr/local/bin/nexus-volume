@@ -1,0 +1,8 @@
+#!/bin/bash
+case "${1:-}" in
+up) pactl set-sink-mute @DEFAULT_SINK@ 0 && pactl set-sink-volume @DEFAULT_SINK@ +5% ;;
+down) pactl set-sink-volume @DEFAULT_SINK@ -5% ;;
+mute) pactl set-sink-mute @DEFAULT_SINK@ toggle ;;
+*) echo "usage: nexus-volume up|down|mute" >&2; exit 2 ;;
+esac
+nexus-sound menu-click

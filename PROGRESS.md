@@ -4,6 +4,16 @@
 
 **Phase 1: Repo skeleton and bare image.** Waiting for the first GitHub build and a device test.
 
+## Prototype (all phases at once, separate from the phased build)
+
+Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that it has every everyday app Windows has. Details, the Windows app table and every difference from `SPEC.md` are in `prototype/README.md`.
+
+- Built by its own workflow, `.github/workflows/build-prototype.yml` ("Build NEXUS OS prototype"). It runs only when `prototype/` changes. The main build ignores `prototype/`.
+- A quick check job runs first (about 5 minutes). It catches typos in Python, shell, Lua and XML, and test-generates all themes before the long build starts.
+- Image name: `NEXUS-OS-prototype_<version>_radxa-zero3.img.xz` (Actions artifact only, no release).
+- Status: written, not yet built or tested. **Everything in it needs device test.**
+- Needs Elijah's OK before any of it moves into the main build: the extra packages and the spec differences listed in `prototype/README.md`. The biggest ones: AntiMicroX swapped for a built-in helper (no ARM build), PPSSPP/Flycast as RetroArch cores, and nightly libretro cores.
+
 ## Decisions made
 
 | Topic | Decision |
@@ -51,6 +61,21 @@
 - [ ] Sound plays through the headphone jack
 - [ ] Hostname is `nexus` and `/etc/nexus/version` exists
 - [ ] `armbian-install` copies the system to the eMMC and it boots without the SD card
+
+## Prototype: needs device test
+
+- [ ] Prototype build goes green on GitHub
+- [ ] Boots with the amber grid-sweep boot animation (from the second boot; the first boot sets it up)
+- [ ] Themed login screen with the callsign header
+- [ ] Desktop: bottom taskbar, NEXUS start button, HUD widgets top-left and top-right
+- [ ] Super opens the start menu; Super + I/A/H/G/T/K/L, Print and Super + Shift + S work
+- [ ] Every app in the prototype README table opens
+- [ ] Settings: each of the 11 categories opens; Wi-Fi connect, Bluetooth pair, volume, colour preset switch
+- [ ] Quick Settings tiles and sliders
+- [ ] Controller: Select + Start held 2 seconds toggles mouse mode
+- [ ] Touch: long-press gives a right-click
+- [ ] Micro SD: Settings > System > Storage > Prepare card, then games/files/snapshots folders appear
+- [ ] Pico lid sensor and battery level (once the Pico is wired)
 
 ## Questions to settle in later phases
 

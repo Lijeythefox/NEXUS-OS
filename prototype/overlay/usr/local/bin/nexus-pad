@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+import sys
+
+sys.path.insert(0, "/opt/nexus/lib")
+
+from nexus.pad import main
+
+sys.exit(main())

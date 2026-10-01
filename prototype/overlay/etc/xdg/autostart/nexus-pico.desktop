@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS lid and battery sensor
+Comment=Reads the Pico hinge sensor and battery voltage
+Exec=nexus-pico
+Icon=nexus-hud
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

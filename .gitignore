@@ -1,0 +1,7 @@
+/build/
+/output/
+*.img
+*.img.xz
+Thumbs.db
+desktop.ini
+.DS_Store

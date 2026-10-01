@@ -1,0 +1,176 @@
+name: Build NEXUS OS image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "pico/**"
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  ARMBIAN_REF: v26.5.1
+  RELEASE: trixie
+  DESKTOP_ENVIRONMENT: xfce
+  DESKTOP_TIER: minimal
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+
+    steps:
+      - name: Free disk space on the runner
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/share/swift \
+            /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules
+          sudo docker image prune --all --force || true
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile /swapfile || true
+          sudo apt-get clean
+          df -h /
+
+      - name: Check out NEXUS OS
+        uses: actions/checkout@v5
+
+      - name: Read board settings
+        run: |
+          sed -i 's/\r$//' config/board.conf
+          source config/board.conf
+          if [[ -z "${BOARD:-}" || -z "${BRANCH:-}" ]]; then
+            echo "::error::config/board.conf must set BOARD and BRANCH"
+            exit 1
+          fi
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="$GITHUB_REF_NAME"
+          else
+            version="dev-$(date -u +%Y%m%d)-${GITHUB_SHA::7}"
+          fi
+          {
+            echo "BOARD=$BOARD"
+            echo "BRANCH=$BRANCH"
+            echo "NEXUS_VERSION=$version"
+          } >> "$GITHUB_ENV"
+          echo "Building NEXUS OS $version for $BOARD (kernel $BRANCH, Debian $RELEASE, $DESKTOP_ENVIRONMENT $DESKTOP_TIER)"
+
+      - name: Check out Armbian build framework
+        uses: actions/checkout@v5
+        with:
+          repository: armbian/build
+          ref: ${{ env.ARMBIAN_REF }}
+          path: build
+
+      - name: Stage NEXUS files into the Armbian build
+        run: |
+          mkdir -p build/userpatches/overlay/.nexus-build
+          cp -r userpatches/. build/userpatches/
+          chmod +x build/userpatches/customize-image.sh
+          cp -r overlay/. build/userpatches/overlay/
+          cp config/packages.txt build/userpatches/overlay/.nexus-build/packages.txt
+          echo "$NEXUS_VERSION" > build/userpatches/overlay/.nexus-build/version
+
+      - name: Restore build cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            build/cache/rootfs
+            build/cache/aptcache
+          key: armbian-${{ env.ARMBIAN_REF }}-${{ env.BOARD }}-${{ env.BRANCH }}-${{ env.RELEASE }}-${{ env.DESKTOP_ENVIRONMENT }}-${{ env.DESKTOP_TIER }}-${{ hashFiles('config/packages.txt') }}
+          restore-keys: |
+            armbian-${{ env.ARMBIAN_REF }}-${{ env.BOARD }}-${{ env.BRANCH }}-${{ env.RELEASE }}-${{ env.DESKTOP_ENVIRONMENT }}-${{ env.DESKTOP_TIER }}-
+            armbian-${{ env.ARMBIAN_REF }}-
+
+      - name: Install Armbian build requirements
+        working-directory: build
+        run: |
+          sudo ./compile.sh requirements
+          sudo chown -R "$USER:$USER" .
+
+      - name: Build image
+        working-directory: build
+        run: |
+          ./compile.sh build \
+            BOARD="$BOARD" \
+            BRANCH="$BRANCH" \
+            RELEASE="$RELEASE" \
+            BUILD_MINIMAL=no \
+            BUILD_DESKTOP=yes \
+            DESKTOP_ENVIRONMENT="$DESKTOP_ENVIRONMENT" \
+            DESKTOP_TIER="$DESKTOP_TIER" \
+            KERNEL_CONFIGURE=no \
+            COMPRESS_OUTPUTIMAGE=sha,xz \
+            VENDOR="NEXUS-OS" \
+            VENDORURL="https://github.com/${{ github.repository }}" \
+            VENDORSUPPORT="https://github.com/${{ github.repository }}/issues" \
+            VENDORBUGS="https://github.com/${{ github.repository }}/issues" \
+            EXPERT=yes
+
+      - name: Rename image
+        run: |
+          mkdir -p dist
+          shopt -s nullglob
+          images=(build/output/images/*.img.xz)
+          if (( ${#images[@]} != 1 )); then
+            echo "::error::Expected exactly one .img.xz image, found ${#images[@]}"
+            ls -l build/output/images || true
+            exit 1
+          fi
+          image="${images[0]}"
+          name="NEXUS-OS_${NEXUS_VERSION}_${BOARD}.img.xz"
+          sudo mv "$image" "dist/$name"
+          sudo chown "$USER:$USER" "dist/$name"
+          (cd dist && sha256sum "$name" > "$name.sha256")
+          ls -lh dist
+
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-OS_${{ env.NEXUS_VERSION }}_${{ env.BOARD }}
+          path: dist/*
+          compression-level: 0
+          retention-days: 30
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          name: NEXUS OS ${{ env.NEXUS_VERSION }}
+
+      - name: Prepare cache for saving
+        if: steps.cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          mkdir -p build/cache/rootfs build/cache/aptcache
+          sudo chown -R "$USER:$USER" build/cache/rootfs build/cache/aptcache
+
+      - name: Upload cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            build/cache/rootfs
+            build/cache/aptcache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build/output/logs/
+          if-no-files-found: ignore
+          retention-days: 14

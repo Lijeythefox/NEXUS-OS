@@ -2,6 +2,9 @@
 /output/
 *.img
 *.img.xz
+/log-*.log
+/log-*.log.ans
+/summary-*.md
 Thumbs.db
 desktop.ini
 .DS_Store

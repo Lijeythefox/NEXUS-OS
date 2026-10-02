@@ -19,6 +19,21 @@ log() {
 	echo "[nexus] $*"
 }
 
+prepare_apt() {
+	log "Telling apt to keep existing config files instead of asking"
+	cat >/etc/apt/apt.conf.d/90nexus-noninteractive <<'EOF'
+Dpkg::Options {
+   "--force-confdef";
+   "--force-confold";
+};
+EOF
+}
+
+repair_dpkg() {
+	dpkg --configure -a || true
+	apt-get install -y -f || true
+}
+
 add_repositories() {
 	install -d /usr/share/keyrings /etc/apt/sources.list.d
 	if [[ -f "$DOWNLOADS/keys/microsoft.gpg" ]]; then
@@ -51,10 +66,17 @@ install_packages() {
 	log "Installing ${#packages[@]} packages"
 	apt-get update
 	if ! apt-get install -y "${packages[@]}"; then
-		log "Bulk install failed, installing one at a time"
-		for package in "${packages[@]}"; do
-			apt-get install -y "$package" || missing+=("$package")
-		done
+		log "Bulk install failed, repairing and trying again"
+		repair_dpkg
+		if ! apt-get install -y "${packages[@]}"; then
+			log "Still failing, installing one at a time"
+			for package in "${packages[@]}"; do
+				apt-get install -y "$package" || {
+					missing+=("$package")
+					repair_dpkg
+				}
+			done
+		fi
 	fi
 	mkdir -p /var/lib/nexus
 	printf '%s\n' "${missing[@]:-}" >/var/lib/nexus/missing-packages.txt
@@ -67,7 +89,10 @@ install_downloads() {
 	if compgen -G "$DOWNLOADS/debs/*.deb" >/dev/null; then
 		log "Installing downloaded apps"
 		for deb in "$DOWNLOADS"/debs/*.deb; do
-			apt-get install -y "$deb" || log "Could not install $(basename "$deb")"
+			apt-get install -y "$deb" || {
+				log "Could not install $(basename "$deb")"
+				repair_dpkg
+			}
 		done
 	fi
 	if [[ -d "$DOWNLOADS/apps" ]]; then
@@ -177,6 +202,12 @@ EOF
 }
 
 clean_up() {
+	repair_dpkg
+	if dpkg --audit | grep -q .; then
+		log "Some packages are still not fully set up:"
+		dpkg --audit
+		exit 1
+	fi
 	if ! mountpoint -q /var/cache/apt; then
 		apt-get clean
 	fi
@@ -184,6 +215,7 @@ clean_up() {
 
 main() {
 	log "Customising prototype image for $BOARD ($RELEASE, $ARCH, desktop=$BUILD_DESKTOP)"
+	prepare_apt
 	add_repositories
 	install_packages
 	install_downloads

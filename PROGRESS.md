@@ -11,7 +11,9 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - Built by its own workflow, `.github/workflows/build-prototype.yml` ("Build NEXUS OS prototype"). It runs only when `prototype/` changes. The main build ignores `prototype/`.
 - A quick check job runs first (about 5 minutes). It catches typos in Python, shell, Lua and XML, and test-generates all themes before the long build starts.
 - Image name: `NEXUS-OS-prototype_<version>_radxa-zero3.img.xz` (Actions artifact only, no release).
-- Status: written, not yet built or tested. **Everything in it needs device test.**
+- Status: written, not yet built successfully. **Everything in it needs device test.**
+- Build #2 failed (2026-10-02): Chromium asked an interactive question during install (Armbian already ships `/etc/chromium/master_preferences`). Nobody could answer it, so Chromium was left half-installed and every later install failed, including Armbian's own `armbian-config` step. Fix: `customize-image.sh` now tells apt to always keep existing config files, repairs half-installed packages after any failure, and stops with a clear message if anything is still broken.
+- Phase 1 main build #1 succeeded (2026-10-02).
 - Approved for the main build: the built-in controller helper, PPSSPP/Flycast as RetroArch cores, nightly libretro cores, and the extra packages. The other differences in `prototype/README.md` (Timeshift folder, weather source, Hotspot tile, menu sound, window corners) are still open.
 - `SPEC.md` updated (with Elijah's OK): flashing now goes through a spare SD card, and the Pico also reads the battery voltage.
 

@@ -41,7 +41,7 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - `.github/workflows/build.yml`: builds the image on every push to `main` (or the manual **Run workflow** button). Frees runner disk space, caches Armbian's rootfs and apt downloads, uploads `NEXUS-OS_<version>_radxa-zero3.img.xz` under Actions. Pushing a tag like `v0.1` also publishes it under Releases.
 - `.gitattributes`: forces Linux line endings so scripts written on Windows don't break the build.
 - `.gitignore`: ignores build output and Windows clutter.
-- `docs/FLASHING.md`: how to get the image onto the deck.
+- `docs/FLASHING.md`: full install guide: push in GitHub Desktop, wait for the build, download, flash to SD, first boot, copy to eMMC, set up the personal micro SD card.
 
 ## Still to do in Phase 1
 

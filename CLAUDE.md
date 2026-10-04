@@ -8,12 +8,12 @@ NEXUS OS is a custom Linux image for Elijah's handheld cyberdeck. `SPEC.md` is t
 
 ## The hardware
 
-- Board: Radxa Zero 3W (RK3566, 8GB RAM, 64GB eMMC, no GPIO). May be swapped later for a Raspberry Pi 5 or RK3588 board, so nothing may depend on this board except `config/board.conf`.
+- Board: Radxa Zero 3W (RK3566, 8GB RAM, no eMMC, no GPIO). May be swapped later for a Raspberry Pi 5 or RK3588 board, so nothing may depend on this board except `config/board.conf`.
 - Screen: Waveshare 7" 1024x600 capacitive touchscreen (H), HDMI, built-in 3.5mm headphone jack.
 - Input: mini keyboard + trackpad, Bluetooth controller (8BitDo-style), touchscreen. All three are used together.
-- Storage: OS on internal eMMC, personal files and games on micro SD mounted at `/mnt/sdcard`.
+- Storage: OS on the micro SD card (the only card slot). Personal files and games on a USB flash drive labelled `NEXUS-SD` in the internal USB hub, mounted at `/mnt/sdcard`.
 - Ports: USB-C power, micro SD, 2x USB-A via a Simplecom CH385 hub.
-- Case: folding handheld in a Tactix technician case. A Raspberry Pi Pico over USB will read a hinge magnet sensor for lid-close sleep.
+- Case: folding handheld in a Tactix technician case. A Raspberry Pi Pico over USB reads a hinge magnet sensor for lid-close sleep, the battery voltage, and the deck's 8 built-in buttons (D-pad + A/B/X/Y).
 
 ## Hard constraints
 

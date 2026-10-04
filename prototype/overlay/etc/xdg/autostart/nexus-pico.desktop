@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=NEXUS lid and battery sensor
-Comment=Reads the Pico hinge sensor and battery voltage
+Name=NEXUS Pico sensor
+Comment=Reads the Pico hinge sensor, battery voltage and deck buttons
 Exec=nexus-pico
 Icon=nexus-hud
 OnlyShowIn=XFCE;

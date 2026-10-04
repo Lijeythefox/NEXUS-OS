@@ -6,7 +6,12 @@ from gi.repository import Gdk, GLib, Gtk
 
 from nexus import devices, system
 from nexus.common import Settings, out, root, run, xfconf_get, xfconf_list, xfconf_set
+from nexus.pico import DECK_BUTTONS, DECK_NAME
 from nexus_settings.ui import Page, background, confirm, label, styled
+
+DECK_DPAD = (("up", 1, 0), ("left", 0, 1), ("right", 2, 1), ("down", 1, 2))
+DECK_FACE = (("y", 1, 0), ("x", 0, 1), ("b", 2, 1), ("a", 1, 2))
+DECK_TEST_SECONDS = 30
 
 
 class BluetoothPage(Page):
@@ -68,6 +73,106 @@ class ControllerPage(Page):
         self.test_label = label("Press Start test, then press buttons and move the sticks.", "nexus-value")
         self.button("Button test", "Runs for 15 seconds", "Start test", self.start_test)
         self.put(self.test_label)
+        self.deck_view()
+
+    def deck_view(self):
+        self.section("Deck buttons")
+        self.deck_label = label("Press Start test, then press each deck button. It lights up while held.",
+                                "nexus-value")
+        self.button("Deck button test", f"The D-pad and A, B, X, Y beside the controller cradles. "
+                    f"Runs for {DECK_TEST_SECONDS} seconds.", "Start test", self.start_deck_test)
+        self.put(self.deck_label)
+        pads = Gtk.Box(spacing=48, halign=Gtk.Align.CENTER)
+        pads.set_margin_top(8)
+        self.deck_keys = {}
+        for layout in (DECK_DPAD, DECK_FACE):
+            grid = Gtk.Grid(row_spacing=6, column_spacing=6)
+            for name, column, row in layout:
+                key = styled(Gtk.Label(label=name.upper()), "nexus-key")
+                key.set_size_request(72, 48)
+                grid.attach(key, column, row, 1, 1)
+                self.deck_keys[name] = key
+            pads.add(grid)
+        self.put(pads)
+        self.deck_alive = True
+        self.deck_running = False
+        pads.connect("destroy", lambda _: setattr(self, "deck_alive", False))
+
+    def show_deck(self, text=None, state=None):
+        if not self.deck_alive:
+            return False
+        if text is not None:
+            self.deck_label.set_text(text)
+        for name, key in self.deck_keys.items():
+            context = key.get_style_context()
+            if state and state.get(name):
+                context.add_class("lit")
+            else:
+                context.remove_class("lit")
+        return False
+
+    def start_deck_test(self):
+        if self.deck_running:
+            return
+        self.deck_running = True
+
+        def listen(device, ecodes):
+            faces = {ecodes.BTN_SOUTH: "a", ecodes.BTN_EAST: "b", ecodes.BTN_WEST: "x", ecodes.BTN_NORTH: "y"}
+            state = dict.fromkeys(DECK_BUTTONS, False)
+            for code in device.active_keys():
+                if code in faces:
+                    state[faces[code]] = True
+            hat_x = device.absinfo(ecodes.ABS_HAT0X).value
+            hat_y = device.absinfo(ecodes.ABS_HAT0Y).value
+            state["left"], state["right"] = hat_x < 0, hat_x > 0
+            state["up"], state["down"] = hat_y < 0, hat_y > 0
+            GLib.idle_add(self.show_deck, "Listening. Press each deck button.", dict(state))
+            deadline = time.monotonic() + DECK_TEST_SECONDS
+            while time.monotonic() < deadline and self.deck_alive:
+                ready, _, _ = select.select([device], [], [], 0.2)
+                if not ready:
+                    continue
+                for event in device.read():
+                    if event.type == ecodes.EV_KEY and event.code in faces:
+                        state[faces[event.code]] = event.value != 0
+                    elif event.type == ecodes.EV_ABS and event.code == ecodes.ABS_HAT0X:
+                        state["left"], state["right"] = event.value < 0, event.value > 0
+                    elif event.type == ecodes.EV_ABS and event.code == ecodes.ABS_HAT0Y:
+                        state["up"], state["down"] = event.value < 0, event.value > 0
+                GLib.idle_add(self.show_deck, None, dict(state))
+            GLib.idle_add(self.show_deck, "Test finished.", None)
+
+        def work():
+            try:
+                from evdev import InputDevice, ecodes, list_devices
+            except ImportError:
+                GLib.idle_add(self.show_deck, "python3-evdev is not installed", None)
+                return
+            device = None
+            for path in list_devices():
+                candidate = InputDevice(path)
+                if candidate.name == DECK_NAME:
+                    device = candidate
+                    break
+                candidate.close()
+            if device is None:
+                GLib.idle_add(self.show_deck, "Deck buttons not found. Check the Pico is plugged in and not paused "
+                              "(System > Power & battery > Pico sensor).", None)
+                return
+            try:
+                listen(device, ecodes)
+            except OSError:
+                GLib.idle_add(self.show_deck, "The deck buttons disappeared. Is the Pico still plugged in?", None)
+            finally:
+                device.close()
+
+        def run_test():
+            try:
+                work()
+            finally:
+                self.deck_running = False
+
+        threading.Thread(target=run_test, daemon=True).start()
 
     def start_test(self):
         def work():
@@ -80,7 +185,7 @@ class ControllerPage(Page):
             for path in list_devices():
                 device = InputDevice(path)
                 keys = device.capabilities().get(ecodes.EV_KEY, [])
-                if ecodes.BTN_SOUTH in keys and device.name != "NEXUS controller mouse":
+                if ecodes.BTN_SOUTH in keys and device.name not in ("NEXUS controller mouse", DECK_NAME):
                     pads.append(device)
             if not pads:
                 GLib.idle_add(self.test_label.set_text, "No controller found. Pair it first.")
@@ -234,8 +339,8 @@ class TouchPage(Page):
 
 PAGES = [
     ("bluetooth", "Bluetooth", "Pair, connect, forget", "bluetooth pair headphones controller keyboard", BluetoothPage),
-    ("controller", "Controller", "Pair, test buttons, mouse mode, stick speed",
-     "gamepad 8bitdo joystick mouse mode select start", ControllerPage),
+    ("controller", "Controller", "Pair, test buttons, mouse mode, stick speed, deck buttons",
+     "gamepad 8bitdo joystick mouse mode select start deck buttons dpad pico", ControllerPage),
     ("keyboard", "Keyboard", "Layout, repeat speed, shortcuts", "keyboard layout shortcut keys repeat", KeyboardPage),
     ("mouse", "Mouse & trackpad", "Speed, tap to click, scrolling", "mouse trackpad touchpad tap scroll", MousePage),
     ("touch", "Touchscreen", "Calibrate, long-press time", "touch screen calibrate long press right click", TouchPage),

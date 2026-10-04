@@ -1,0 +1,1 @@
+030000008a2e0000584e000001000000,NEXUS Deck Buttons,a:b0,b:b1,x:b3,y:b2,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8,platform:Linux,

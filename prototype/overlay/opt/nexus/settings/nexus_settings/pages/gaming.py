@@ -87,8 +87,8 @@ class MinecraftPage(Page):
         memory = int(prism_value("MaxMemAlloc", "3072"))
         self.scale("Memory limit (MB)", 1024, 6144, 512, memory,
                    lambda value: set_prism_value("MaxMemAlloc", int(value)))
-        self.note("A ready-made Fabric instance with Sodium is copied to the micro SD card the first time you log "
-                  "in with the card inserted.")
+        self.note("A ready-made Fabric instance with Sodium is copied to the NEXUS-SD storage drive the first time "
+                  "you log in with the drive plugged in.")
         self.button("Minecraft", "Prism Launcher", "Open", lambda: spawn(["nexus-prism"]))
 
 

@@ -1,1 +1,5 @@
 export QT_QPA_PLATFORMTHEME=gtk3
+if [ -r /usr/share/nexus/input/sdl-controllers.txt ]; then
+	SDL_GAMECONTROLLERCONFIG="$(cat /usr/share/nexus/input/sdl-controllers.txt)"
+	export SDL_GAMECONTROLLERCONFIG
+fi

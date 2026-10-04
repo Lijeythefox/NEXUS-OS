@@ -2,7 +2,7 @@
 Type=Application
 Name=Games
 GenericName=ES-DE game launcher
-Comment=Retro games from the micro SD card, controller friendly
+Comment=Retro games from the storage drive, controller friendly
 Exec=nexus-games
 Icon=nexus-games
 Terminal=false

@@ -1,11 +1,10 @@
-import json
 import os
 import shutil
 from pathlib import Path
 
 from gi.repository import Gtk
 
-from nexus import battery, devices, system
+from nexus import battery, devices, storage, system
 from nexus.common import (
     SD_MOUNT,
     VERSION_FILE,
@@ -23,7 +22,7 @@ from nexus.common import (
     xfconf_set,
 )
 from nexus.presets import active_preset
-from nexus_settings.ui import Page, ask_text, confirm, label, message
+from nexus_settings.ui import Page, ask_text, choose, confirm, label, message
 
 
 class DisplayPage(Page):
@@ -126,7 +125,7 @@ class PowerPage(Page):
         else:
             self.note("The battery level comes from the Pico hinge sensor. It isn't connected yet.")
         paused = data.get("paused", False)
-        self.button("Pico sensor", "Pause it while you program the Pico in Thonny",
+        self.button("Pico sensor", "Pause it while you program the Pico in Thonny. The deck buttons stop while paused.",
                     "Resume" if paused else "Pause", lambda: self.toggle_pico(paused))
         self.section("Screen and sleep")
         current = str(int(xfconf_get("xfce4-power-manager", "/xfce4-power-manager/dpms-on-ac-off") or 10))
@@ -173,37 +172,24 @@ def size(value):
     return f"{value:.1f} PB"
 
 
-def find_card():
-    root_source = out(["findmnt", "-n", "-o", "SOURCE", "/"])
-    root_disk = out(["lsblk", "-no", "PKNAME", root_source])
-    try:
-        data = json.loads(out(["lsblk", "-J", "-o", "NAME,TYPE,SIZE,TRAN,RM,MODEL"]))
-    except json.JSONDecodeError:
-        return None
-    for disk in data.get("blockdevices", []):
-        name = disk.get("name", "")
-        if disk.get("type") == "disk" and name.startswith("mmcblk") and name != root_disk and "boot" not in name:
-            return f"/dev/{name}", disk.get("size", "?")
-    return None
-
-
 class StoragePage(Page):
     def build(self):
-        self.section("Internal storage (eMMC)")
+        self.section("Boot microSD card")
         self.usage_row("System and apps", "/")
-        self.section("Micro SD card")
+        self.note("NEXUS runs from this card. Reflashing replaces it but never touches the storage drive.")
+        self.section(f"Storage drive ({storage.DRIVE_LABEL})")
         if os.path.ismount(SD_MOUNT):
             self.usage_row("Games and personal files", str(SD_MOUNT))
-            self.buttons("Card folders", "ROMs, Files, Minecraft and Snapshots",
+            self.buttons("Drive folders", "ROMs, Files, Minecraft and Snapshots",
                          [("Open", lambda: spawn(["thunar", str(SD_MOUNT)])), ("Set up folders", self.setup)])
+        elif storage.labelled_drive_present():
+            self.note(f"The {storage.DRIVE_LABEL} drive is plugged in but not mounted yet.")
+            self.button("Use the drive", "Mounts it and checks its folders", "Mount", self.setup)
         else:
-            card = find_card()
-            if card:
-                self.note(f"A card was found ({card[1]}) but it isn't set up for NEXUS yet.")
-                self.button("Prepare card", "Formats the card for NEXUS. This erases everything on it.",
-                            "Prepare", lambda: self.prepare(card[0]), style="destructive-action")
-            else:
-                self.note("No micro SD card found. Games, files and snapshots are stored on the card.")
+            self.note(f"No {storage.DRIVE_LABEL} drive found. Games, files, Minecraft and snapshots are stored on a "
+                      "USB drive plugged into the deck's internal USB hub.")
+            self.button("Prepare storage drive", "Formats a USB drive for NEXUS. This erases everything on it.",
+                        "Prepare", self.prepare, style="destructive-action")
         self.section("Clean up")
         self.button("Free up space", "Removes download caches, old logs, thumbnails and the trash", "Clean up",
                     self.cleanup)
@@ -218,14 +204,32 @@ class StoragePage(Page):
         self.row(title, f"{size(used)} used of {size(total)}  ({size(free)} free)", bar)
 
     def setup(self):
-        self.root_task(lambda: root("sd-setup"), "Card folders are ready")
+        self.root_task(lambda: root("storage-setup"), "Drive folders are ready")
 
-    def prepare(self, device):
-        answer = ask_text(self.window, "Prepare card",
-                          f"Everything on {device} will be erased. Type ERASE to continue.")
+    def prepare(self):
+        drives = storage.usb_drives()
+        if not drives:
+            message(self.window, "No USB drive found. Plug one into the deck's USB hub and try again. "
+                                 "The microSD card NEXUS runs from is never listed.")
+            return
+        options = []
+        for disk in drives:
+            text = f"{storage.describe(disk)}  ·  {disk['path']}"
+            names = storage.labels(disk)
+            if names:
+                text += f"  ·  now named {', '.join(names)}"
+            options.append((disk["path"], text))
+        device = choose(self.window, "Pick the USB drive to prepare", options)
+        if not device:
+            return
+        disk = next(item for item in drives if item["path"] == device)
+        answer = ask_text(self.window, "Prepare storage drive",
+                          f"{storage.describe(disk)} at {device} will be ERASED and renamed {storage.DRIVE_LABEL}. "
+                          "Everything on it will be lost.\n\nType ERASE to continue.")
         if answer != "ERASE":
             return
-        self.root_task(lambda: root("sd-format", device), "The card is ready")
+        self.root_task(lambda: root("storage-format", device),
+                       "The storage drive is ready. Log out and back in to use it.")
 
     def cleanup(self):
         def work():
@@ -267,6 +271,7 @@ PAGES = [
     ("notifications", "Notifications", "Do not disturb, notification sound", "alerts dnd popups", NotificationsPage),
     ("power", "Power & battery", "Battery level, screen timeout, lid, performance",
      "battery sleep lid performance cpu screen off pico", PowerPage),
-    ("storage", "Storage", "eMMC and micro SD usage, clean up", "disk space sd card format clean", StoragePage),
+    ("storage", "Storage", "Boot microSD and storage drive usage, clean up",
+     "disk space sd card usb drive nexus-sd format prepare clean", StoragePage),
     ("about", "About", "Callsign, board, OS version", "version info board system", AboutPage),
 ]

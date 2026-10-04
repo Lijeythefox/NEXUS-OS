@@ -47,6 +47,7 @@ These are suggestions. Each one needs your OK before it goes into the main build
 | PPSSPP and Flycast as separate apps | The RetroArch versions (PPSSPP core, Flycast core) | Not in Debian 13 for ARM. ES-DE picks them automatically |
 | Snapshots in `/mnt/sdcard/Snapshots/` | Timeshift's own `/mnt/sdcard/timeshift/`, with `Snapshots` as a shortcut to it | Timeshift always uses that folder name |
 | Battery level | Read by the Pico (GP26) along with the lid sensor | The Zero 3W can't measure the battery itself |
+| Deck buttons (not in the spec) | The Pico also reads the 8 built-in buttons (D-pad on GP2–GP5, A/B/X/Y on GP6–GP9) and NEXUS turns them into a controller called "NEXUS Deck Buttons" | The Zero 3W has no GPIO. Asked for by Elijah on 2026-10-04 |
 | Click sound on menu open | Plays when the start menu opens with the Super key | XFCE has no general menu-open sound hook |
 | Hotspot tile | Connects to your saved phone hotspot | The spec's "saved phone hotspots" |
 | Weather | Open-Meteo (free, no account) | Needs no sign-up |
@@ -81,7 +82,7 @@ Downloaded during the build (pinned versions in `config/downloads.txt`):
 | `overlay/usr/share/nexus/presets/` | The five colour presets, plus a hidden high-contrast one |
 | `overlay/usr/local/bin/`, `overlay/usr/local/sbin/` | The `nexus-*` commands |
 | `overlay/etc/skel/` | Default desktop setup for new users (taskbar, start menu, HUD, ES-DE, RetroArch, Prism) |
-| `pico/lid-sensor/` | Pico firmware and wiring guide |
+| `pico/lid-sensor/` | Pico firmware and wiring guide (lid sensor, battery, deck buttons) |
 
 ## How the colours work
 

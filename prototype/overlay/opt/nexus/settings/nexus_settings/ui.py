@@ -33,6 +33,8 @@ APP_CSS = Template("""
 .nexus-toast { background-color: $surface_hi; border: 1px solid $primary; border-radius: ${radius}px; padding: 8px 16px; color: $text_hi; }
 .nexus-preset { background-color: transparent; border: 2px solid $grid; border-radius: ${radius}px; padding: 4px; }
 .nexus-preset.active { border-color: $primary; }
+.nexus-key { background-color: $surface_hi; border: 1px solid $border; border-radius: ${radius}px; color: $dim; }
+.nexus-key.lit { background-color: $primary; border-color: $primary; color: $on_primary; }
 """)
 
 _provider = None

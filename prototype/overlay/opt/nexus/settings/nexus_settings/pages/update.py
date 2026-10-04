@@ -54,8 +54,8 @@ class SnapshotsPage(Page):
     snapshots = None
 
     def build(self):
-        self.note("Full system snapshots are saved on the micro SD card every day (the last 5 are kept) and before "
-                  "updates.")
+        self.note("Full system snapshots are saved on the NEXUS-SD storage drive every day (the last 5 are kept) "
+                  "and before updates.")
         self.buttons("Snapshots", None, [
             ("Take one now", self.create),
             ("Show list", self.load),
@@ -84,8 +84,8 @@ class SnapshotsPage(Page):
 
 class GuidePage(Page):
     def build(self):
-        self.note("To upgrade the board or start fresh, download a new NEXUS image from GitHub and flash it. "
-                  "Your games and files on the micro SD card are not touched.")
+        self.note("To upgrade the board or start fresh, download a new NEXUS image from GitHub and flash it to the "
+                  "boot microSD card. Your games and files on the NEXUS-SD storage drive are not touched.")
         self.button("Rebuild and flash guide", None, "Open", lambda: spawn(["xdg-open", GUIDE_URL]))
 
 

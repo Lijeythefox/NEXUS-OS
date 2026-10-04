@@ -9,8 +9,11 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, "/opt/nexus/lib")
+
+from nexus.storage import DRIVE_LABEL, block_devices, refusal, system_disks
+
 SD_MOUNT = Path("/mnt/sdcard")
-SD_LABEL = "NEXUS-SD"
 ROM_SYSTEMS = [
     "nes", "snes", "gb", "gbc", "gba", "megadrive", "genesis", "mastersystem", "gamegear",
     "arcade", "mame", "neogeo", "psx", "n64", "psp", "dreamcast", "bios",
@@ -82,17 +85,12 @@ def tailscale_operator():
     return 0
 
 
-def root_disk():
-    source = sh(["findmnt", "-n", "-o", "SOURCE", "/"]).stdout.strip()
-    parent = sh(["lsblk", "-no", "PKNAME", source]).stdout.strip()
-    return f"/dev/{parent}" if parent else source
-
-
-def sd_format(device):
-    if not re.fullmatch(r"/dev/(mmcblk\d+|sd[a-z])", device):
-        raise RuntimeError(f"{device} is not a card or USB drive")
-    if device == root_disk():
-        raise RuntimeError("Refusing to erase the disk the system is running from")
+def storage_format(device):
+    found = block_devices(device) if device.startswith("/dev/") else []
+    disk = found[0] if found else {"path": device}
+    problem = refusal(disk, system_disks())
+    if problem:
+        raise RuntimeError(problem)
     for part in sh(["lsblk", "-nlo", "PATH", device]).stdout.split():
         sh(["umount", part])
     sh(["umount", str(SD_MOUNT)])
@@ -100,19 +98,18 @@ def sd_format(device):
     sh(["sfdisk", "--wipe", "always", device], input_text="label: gpt\n,,L\n", check=True)
     sh(["udevadm", "settle"])
     time.sleep(1)
-    part = device + ("p1" if device[-1].isdigit() else "1")
-    sh(["mkfs.ext4", "-F", "-L", SD_LABEL, part], check=True)
+    sh(["mkfs.ext4", "-F", "-L", DRIVE_LABEL, device + "1"], check=True)
     sh(["udevadm", "settle"])
     SD_MOUNT.mkdir(parents=True, exist_ok=True)
     sh(["mount", str(SD_MOUNT)], check=True)
-    return sd_setup()
+    return storage_setup()
 
 
-def sd_setup():
+def storage_setup():
     if not os.path.ismount(SD_MOUNT):
         sh(["mount", str(SD_MOUNT)])
     if not os.path.ismount(SD_MOUNT):
-        raise RuntimeError("The micro SD card is not mounted. Is it formatted as NEXUS-SD?")
+        raise RuntimeError(f"The storage drive is not mounted. Is it formatted as {DRIVE_LABEL}?")
     user = caller()
     for system in ROM_SYSTEMS:
         (SD_MOUNT / "ROMs" / system).mkdir(parents=True, exist_ok=True)
@@ -184,7 +181,7 @@ def update_check():
 
 def snapshot_create(comment="Manual snapshot"):
     if not TIMESHIFT_CONFIG.exists():
-        raise RuntimeError("Snapshots need the micro SD card. Set it up in Settings > System > Storage first.")
+        raise RuntimeError("Snapshots need the NEXUS-SD storage drive. Set it up in Settings > System > Storage first.")
     result = sh(["timeshift", "--create", "--scripted", "--comments", comment])
     print(result.stdout.strip())
     if result.returncode != 0:
@@ -250,8 +247,8 @@ COMMANDS = {
     "share-password": lambda args: share_password(),
     "set-password": lambda args: set_password(),
     "tailscale-operator": lambda args: tailscale_operator(),
-    "sd-format": lambda args: sd_format(args[0]),
-    "sd-setup": lambda args: sd_setup(),
+    "storage-format": lambda args: storage_format(args[0]),
+    "storage-setup": lambda args: storage_setup(),
     "cleanup": lambda args: cleanup(),
     "update-check": lambda args: update_check(),
     "update-install": lambda args: update_install(),

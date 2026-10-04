@@ -4,7 +4,7 @@
 
 NEXUS OS is a stable, themed Linux desktop for the folding cyberdeck. It is flashed as one ready-made image and built so the same recipe works if the board is upgraded later.
 
-- **Target board now:** Radxa Zero 3W (RK3566, 8GB RAM, 64GB eMMC, no GPIO).
+- **Target board now:** Radxa Zero 3W (RK3566, 8GB RAM, no eMMC, no GPIO).
 - **Upgrade path:** Raspberry Pi 5 or an RK3588 board (e.g. Orange Pi 5), by changing one line in the build recipe.
 - **Screen and input:** Waveshare 7" 1024x600 capacitive touchscreen (H) over HDMI, plus a mini keyboard + trackpad and a Bluetooth controller, all used together.
 - **Priorities, in order:** normal computer use, coding and tinkering, retro gaming, local AI (via a home machine).
@@ -22,7 +22,7 @@ How the image gets made:
 1. A GitHub repository (`nexus-os`) holds the recipe: a board setting, a package list, theme files, configs and a setup script.
 2. Pushing a change triggers GitHub Actions, which runs the Armbian build in the cloud for free.
 3. The finished `.img` file appears under the repo's **Actions** tab (or **Releases**) to download on Windows.
-4. Flash it to a spare micro SD card with balenaEtcher or Raspberry Pi Imager, boot the deck from it, then copy the system onto the eMMC with `armbian-install` (the eMMC is soldered on, so Windows can't write to it directly). Step by step in `docs/FLASHING.md`.
+4. Flash it to a micro SD card (64GB or bigger, A2-rated) with balenaEtcher or Raspberry Pi Imager and boot the deck from it. The board has no eMMC, so this card is the OS drive. Step by step in `docs/FLASHING.md`.
 
 Repository layout:
 
@@ -34,7 +34,7 @@ Repository layout:
 | `overlay/` | Files copied straight into the image (themes, configs, sounds, wallpapers) |
 | `.github/workflows/build.yml` | The GitHub Actions job that builds the image |
 
-Switching boards later = edit `config/board.conf`, push, download the new image. Files on the micro SD carry over untouched.
+Switching boards later = edit `config/board.conf`, push, download the new image. Files on the NEXUS-SD storage drive carry over untouched.
 
 ## Look and feel
 
@@ -104,7 +104,7 @@ One Settings app laid out like Windows 11: a sidebar of categories on the left, 
 
 | Category | Pages and options |
 | --- | --- |
-| System | Display (resolution, scale, rotation, brightness, night light), Sound (output/input device, volume, test speakers), Notifications (on/off, do not disturb), Power & battery (battery %, sleep timer, lid close action, performance mode), Storage (eMMC and micro SD usage, cleanup), About (callsign, board, OS version) |
+| System | Display (resolution, scale, rotation, brightness, night light), Sound (output/input device, volume, test speakers), Notifications (on/off, do not disturb), Power & battery (battery %, sleep timer, lid close action, performance mode), Storage (boot micro SD and NEXUS-SD drive usage, prepare storage drive, cleanup), About (callsign, board, OS version) |
 | Bluetooth & devices | Bluetooth (pair, connect, forget), Controller (pair, test buttons, mouse-mode combo, stick sensitivity), Keyboard (layout, repeat speed, shortcuts editor), Mouse & trackpad (speed, tap to click, scroll direction, natural scrolling), Touchscreen (calibrate, long-press time) |
 | Network & internet | Wi-Fi (scan, connect, saved networks), Hotspot (saved phone hotspots, auto-connect), VPN (Tailscale on/off, sign in, devices), Network shares (saved Windows shares), Airplane mode |
 | Personalization | Colour preset (five tiles with a live preview), Wallpaper, HUD widgets (pick which show, position, size, always-on-top), Taskbar (icon size, pinned apps, auto-hide), Start menu (pinned apps), Lock screen and login look, Boot animation (on/off), Sound theme (tactical / quiet / off), Fonts and text size |
@@ -152,21 +152,21 @@ Tailscale ties it together: once the home PC, the Minecraft server and the deck 
 | Shared folders | Thunar opens Windows shares (`smb://<pc-name>/<share>`), bookmarked in the sidebar |
 | Remote desktop | Remmina over RDP if the PC runs Windows Pro; RustDesk if it runs Windows Home (Home can't host RDP) |
 | AI | Open WebUI points at the home PC's Tailscale address, so it works away from home too |
-| Deck file share | The deck shares its micro SD `ROMs` folder over the network, so games can be dropped in from Windows |
+| Deck file share | The deck shares the `ROMs` folder on its NEXUS-SD storage drive over the network, so games can be dropped in from Windows |
 
 ## Storage, updates and backups
 
-The OS lives on the internal eMMC; personal files live on the micro SD, so reflashing or upgrading the board never touches them.
+The board has no eMMC, so the OS lives on the micro SD card in the deck's only card slot. Personal files live on a USB flash drive labelled `NEXUS-SD`, plugged into the internal USB hub and mounted at `/mnt/sdcard`, so reflashing the OS card or upgrading the board never touches them.
 
 | Location | Contents |
 | --- | --- |
-| Internal eMMC (64GB) | OS and apps |
+| Boot micro SD card (64GB+, A2-rated) | OS and apps |
 | `/mnt/sdcard/ROMs/` | Games, one folder per system (`snes`, `psx`, `psp`…) as ES-DE expects |
 | `/mnt/sdcard/Files/` | Documents, downloads, screenshots (linked into the home folder) |
 | `/mnt/sdcard/Minecraft/` | Prism Launcher instances and worlds |
 | `/mnt/sdcard/Snapshots/` | Timeshift system snapshots |
 
-The micro SD is formatted ext4 (Linux format) so snapshots work; files get on and off it over the network share or USB.
+The NEXUS-SD drive is formatted ext4 (Linux format) so snapshots work (Settings > System > Storage > Prepare storage drive does this); files get on and off it over the network share or USB.
 
 - **Updates:** stable only. Security updates install automatically; kernel and board firmware are frozen and only change when the image is rebuilt on purpose.
 - **Backups:** Timeshift takes a full system snapshot daily (keeps 5) and before any manual update. Restore from the Timeshift app, or from a terminal if the desktop won't start.
@@ -189,7 +189,7 @@ Most of the spec runs fine on the Zero 3W; these are the parts it will struggle 
 
 - [x] Name the OS: NEXUS OS
 - [ ] Pick the callsign
-- [ ] Re-source the Radxa Zero 3W (8GB/64GB) or choose the upgrade board now
+- [ ] Re-source the Radxa Zero 3W (8GB RAM, no eMMC) or choose the upgrade board now
 - [ ] Check whether the home PC runs Windows Home or Pro (decides Remmina vs RustDesk)
 - [ ] Pick the AI model and set up Ollama on the home PC
 - [ ] Add the hinge magnet sensor + Pico to the case and interconnect board design

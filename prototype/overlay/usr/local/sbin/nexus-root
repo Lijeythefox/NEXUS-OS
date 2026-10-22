@@ -6,8 +6,15 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
+import urllib.request
+import zipfile
 from pathlib import Path
+
+sys.path.insert(0, "/opt/nexus/lib")
+
+from nexus import appcenter
 
 SD_MOUNT = Path("/mnt/sdcard")
 SD_LABEL = "NEXUS-SD"
@@ -114,7 +121,7 @@ def sd_setup():
     if not os.path.ismount(SD_MOUNT):
         raise RuntimeError("The micro SD card is not mounted. Is it formatted as NEXUS-SD?")
     user = caller()
-    for system in ROM_SYSTEMS:
+    for system in ROM_SYSTEMS + appcenter.installed_systems():
         (SD_MOUNT / "ROMs" / system).mkdir(parents=True, exist_ok=True)
     for folder in FILE_FOLDERS:
         (SD_MOUNT / "Files" / folder).mkdir(parents=True, exist_ok=True)
@@ -233,6 +240,85 @@ def uninstall(package):
     return 0
 
 
+def apt_run(*args):
+    environment = dict(os.environ, DEBIAN_FRONTEND="noninteractive")
+    result = subprocess.run(
+        ["apt-get", "-y", "-o", "Dpkg::Options::=--force-confold", *args],
+        capture_output=True, text=True, env=environment,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip()[-800:] or f"apt-get {args[0]} failed")
+
+
+def rom_folder():
+    settings = Path(caller().pw_dir) / "ES-DE/settings/es_settings.xml"
+    try:
+        match = re.search(r'name="ROMDirectory" value="([^"]+)"', settings.read_text(encoding="utf-8"))
+    except OSError:
+        match = None
+    return Path(match.group(1)) if match else SD_MOUNT / "ROMs"
+
+
+def install_core(core):
+    target = appcenter.core_path(core)
+    url = appcenter.CORE_URL.format(core=core)
+    with tempfile.TemporaryDirectory() as work:
+        archive = Path(work) / "core.zip"
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                archive.write_bytes(response.read())
+        except OSError as error:
+            raise RuntimeError(f"Couldn't download {core}. Is the deck online? ({error})")
+        try:
+            with zipfile.ZipFile(archive) as bundle:
+                if target.name not in bundle.namelist():
+                    raise RuntimeError(f"The {core} download didn't contain {target.name}")
+                bundle.extract(target.name, work)
+        except zipfile.BadZipFile:
+            raise RuntimeError(f"The {core} download was damaged. Try again.")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(Path(work) / target.name, target)
+        target.chmod(0o644)
+
+
+def make_rom_folders(systems):
+    base = rom_folder()
+    if not base.parent.is_dir() or (base.is_relative_to(SD_MOUNT) and not os.path.ismount(SD_MOUNT)):
+        return
+    user = caller()
+    for system in systems:
+        folder = base / system
+        if not folder.exists():
+            folder.mkdir(parents=True)
+            os.chown(folder, user.pw_uid, user.pw_gid)
+
+
+def app_install(keys):
+    entries = [appcenter.get(key) for key in keys]
+    packages = [package for entry in entries if entry.kind == "apt" for package in entry.packages]
+    if packages:
+        apt_run("update")
+        apt_run("install", *packages)
+    for entry in entries:
+        if entry.kind == "core":
+            for core in entry.cores:
+                install_core(core)
+            make_rom_folders(entry.systems)
+    return 0
+
+
+def app_remove(key):
+    entry = appcenter.get(key)
+    if entry.kind == "apt":
+        apt_run("remove", *entry.packages)
+    elif entry.kind == "core":
+        for core in entry.cores:
+            appcenter.core_path(core).unlink(missing_ok=True)
+    else:
+        raise RuntimeError(f"{entry.name} is built in and can't be removed here")
+    return 0
+
+
 def calibration():
     text = sys.stdin.read()
     if "Section" not in text:
@@ -258,6 +344,8 @@ COMMANDS = {
     "snapshot-create": lambda args: snapshot_create(" ".join(args) or "Manual snapshot"),
     "snapshot-list": lambda args: snapshot_list(),
     "uninstall": lambda args: uninstall(args[0]),
+    "app-install": lambda args: app_install(args or [""]),
+    "app-remove": lambda args: app_remove(args[0]),
     "calibration": lambda args: calibration(),
 }
 

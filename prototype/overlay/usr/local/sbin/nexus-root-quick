@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,6 +12,13 @@ from nexus.presets import active_key, load_preset
 
 GREETER_CONF = Path("/etc/lightdm/lightdm-gtk-greeter.conf")
 ARMBIAN_ENV = Path("/boot/armbianEnv.txt")
+CUSTOM_KEY = "custom"
+CUSTOM_COLOURS = ("BACKGROUND", "PRIMARY", "SECONDARY", "GRID", "ALERT")
+CUSTOM_CHOICES = {
+    "WALLPAPER": ("topo", "radar", "scope", "rings", "synth"),
+    "SOUND_PACK": ("tactical", "quiet"),
+    "CORNERS": ("rounded", "sharp"),
+}
 GOVERNORS = {"balanced": "schedutil", "performance": "performance", "powersave": "powersave"}
 
 
@@ -93,6 +101,53 @@ def set_callsign(text):
     return 0
 
 
+def custom_preset():
+    values = {}
+    for line in sys.stdin.read().splitlines():
+        key, _, value = line.partition("=")
+        values[key.strip()] = value.strip()
+    name = re.sub(r"[^A-Za-z0-9 _/-]", "", values.get("NAME", "")).strip()[:16] or "Custom"
+    lines = [f"NAME={name}", "STYLE=Your own colours", "ORDER=90"]
+    for key in CUSTOM_COLOURS:
+        colour = values.get(key, "")
+        if not re.fullmatch(r"#[0-9A-Fa-f]{6}", colour):
+            print(f"{key.title()} colour is missing or not a #RRGGBB colour", file=sys.stderr)
+            return 1
+        lines.append(f"{key}={colour.upper()}")
+    for key, allowed in CUSTOM_CHOICES.items():
+        value = values.get(key, allowed[0])
+        lines.append(f"{key}={value if value in allowed else allowed[0]}")
+    conf = PRESET_DIR / f"{CUSTOM_KEY}.conf"
+    existed = conf.exists()
+    conf.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    built = subprocess.run(
+        [sys.executable, "-m", "nexus.assets", "preset", "--key", CUSTOM_KEY, "--callsign", callsign(), "--root", "/"],
+        env={"PYTHONPATH": "/opt/nexus/lib", "PATH": "/usr/bin:/bin"},
+        capture_output=True, text=True,
+    )
+    if built.returncode != 0:
+        if not existed:
+            conf.unlink(missing_ok=True)
+        print(built.stderr.strip()[-600:] or "Couldn't build the custom preset", file=sys.stderr)
+        return 1
+    run(["gtk-update-icon-cache", "-f", "-q", f"/usr/share/icons/{load_preset(CUSTOM_KEY).theme_name}"])
+    return apply_preset(CUSTOM_KEY)
+
+
+def custom_preset_remove():
+    if active_key() == CUSTOM_KEY:
+        print("Pick another preset before removing your custom one", file=sys.stderr)
+        return 1
+    theme = "NEXUS-" + CUSTOM_KEY.title()
+    for folder in (f"/usr/share/themes/{theme}", f"/usr/share/icons/{theme}", f"/usr/share/plymouth/themes/nexus-{CUSTOM_KEY}"):
+        shutil.rmtree(folder, ignore_errors=True)
+    for path in (PRESET_DIR / f"{CUSTOM_KEY}.conf", Path(f"/usr/share/nexus/wallpapers/{CUSTOM_KEY}.png"),
+                 Path(f"/usr/share/xfce4/terminal/colorschemes/nexus-{CUSTOM_KEY}.theme"),
+                 Path(f"/usr/share/onboard/themes/{theme}.theme"), Path(f"/usr/share/onboard/themes/{theme}.colors")):
+        path.unlink(missing_ok=True)
+    return 0
+
+
 def set_env_value(key, value):
     if not ARMBIAN_ENV.exists():
         return False
@@ -136,8 +191,13 @@ def governor(mode, persist=False):
 
 
 def main(argv):
+    if argv[:1] == ["custom-preset"]:
+        return custom_preset()
+    if argv[:1] == ["custom-preset-remove"]:
+        return custom_preset_remove()
     if len(argv) < 2:
-        print("usage: nexus-root-quick preset NAME | callsign TEXT | bootlogo on|off | governor MODE", file=sys.stderr)
+        print("usage: nexus-root-quick preset NAME | custom-preset | custom-preset-remove | callsign TEXT | "
+              "bootlogo on|off | governor MODE", file=sys.stderr)
         return 2
     command, value = argv[0], " ".join(argv[1:])
     if command == "preset":

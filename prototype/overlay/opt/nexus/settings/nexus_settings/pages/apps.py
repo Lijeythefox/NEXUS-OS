@@ -48,24 +48,26 @@ def launch_desktop(app_id):
 
 class AppCenterPage(Page):
     def build(self):
-        self.note("Extra browsers and game systems you can add or remove at any time. Installing needs internet. "
-                  "Your files and games are never touched.")
+        self.note("Extra browsers, games and game systems you can add or remove at any time. Installing needs internet. "
+                  "Your files and saved games are never touched.")
         entries = appcenter.load()
         if not entries:
             self.note("The App Center list is empty.")
             return
         browser = default_browser_id()
+        states = appcenter.installed_map(entries)
         for category in appcenter.categories(entries):
             self.section(category)
             for entry in (item for item in entries if item.category == category):
-                self.entry_row(entry, appcenter.installed(entry), browser)
+                self.entry_row(entry, states[entry.key], browser)
 
     def entry_row(self, entry, installed, browser):
         actions = []
         status = ""
         if installed:
-            if entry.launch:
-                actions.append(("Open", lambda item=entry: launch_desktop(item.launch)))
+            launch = appcenter.launch_id(entry)
+            if launch:
+                actions.append(("Open", lambda app_id=launch: launch_desktop(app_id)))
             if entry.browser:
                 if entry.launch == browser:
                     status = "Default browser"
@@ -254,7 +256,8 @@ class AiPage(Page):
 
 
 PAGES = [
-    ("appcenter", "App Center", "Add browsers and game systems", "install store browser firefox emulator games add apps",
+    ("appcenter", "App Center", "Add browsers, games and game systems",
+     "install store browser firefox emulator games solitaire chess add apps",
      AppCenterPage),
     ("webapps", "Web apps", "Turn websites into apps", "web app website pwa youtube discord shortcut", WebAppsPage),
     ("installed", "Installed apps", "Open or uninstall", "apps programs uninstall remove", InstalledPage),

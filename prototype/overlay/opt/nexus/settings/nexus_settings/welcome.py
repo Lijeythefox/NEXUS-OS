@@ -14,6 +14,7 @@ from nexus_settings.pages.personal import apply_preset, draw_layout, draw_preset
 from nexus_settings.ui import background, label, load_css, styled
 
 DONE_FILE = ".welcome-done"
+GAME_CATEGORIES = ("Games", "Casual games", "Emulators")
 TIPS = [
     ("Start menu", "Super"),
     ("Settings", "Super + I"),
@@ -206,19 +207,25 @@ class WelcomeWindow(Gtk.ApplicationWindow):
         self.refresh()
 
     def step_games(self, box):
-        self.heading.set_text("Extra game systems")
-        box.add(label("NES, SNES, Game Boy, Mega Drive, arcade, PS1, N64, PSP and Dreamcast are already built in. "
-                      "Tick any extra systems you want. They install at the end and need internet.", "nexus-subtitle"))
-        for entry in (item for item in self.entries if item.kind == "core"):
-            if appcenter.installed(entry):
-                box.add(label(f"{entry.name}: already installed", "nexus-subtitle"))
-                continue
-            check = Gtk.CheckButton(label=entry.name, active=entry.key in self.games)
-            check.connect("toggled", lambda widget, key=entry.key: self.pick_game(key, widget.get_active()))
-            row = styled(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2), "nexus-row")
-            row.add(check)
-            row.add(label(entry.description, "nexus-subtitle"))
-            box.add(row)
+        self.heading.set_text("Extra games")
+        box.add(label("NES, SNES, Game Boy, Mega Drive, arcade, PS1, N64, PSP, Dreamcast and Minecraft are already "
+                      "built in. Tick anything else you want. It installs at the end and needs internet.",
+                      "nexus-subtitle"))
+        states = appcenter.installed_map(self.entries)
+        for category in GAME_CATEGORIES:
+            entries = [item for item in self.entries if item.category == category]
+            if entries:
+                box.add(label(category.upper(), "nexus-section"))
+            for entry in entries:
+                if states[entry.key]:
+                    box.add(label(f"{entry.name}: already installed", "nexus-subtitle"))
+                    continue
+                check = Gtk.CheckButton(label=entry.name, active=entry.key in self.games)
+                check.connect("toggled", lambda widget, key=entry.key: self.pick_game(key, widget.get_active()))
+                row = styled(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2), "nexus-row")
+                row.add(check)
+                row.add(label(entry.description, "nexus-subtitle"))
+                box.add(row)
 
     def pick_game(self, key, value):
         if value:

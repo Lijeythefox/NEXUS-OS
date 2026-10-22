@@ -67,11 +67,15 @@ Five presets, picked in Settings > Personalization. Switching one recolours ever
 
 Each preset is one file in the repo, `overlay/usr/share/nexus/presets/<name>.conf`, holding those five colours plus a wallpaper and sound-pack choice. Adding a sixth preset later = copy a file, change the colours, rebuild. No colour is ever hard-coded anywhere else.
 
+**Custom preset:** Settings > Personalization > Custom colour preset lets you pick your own five colours, wallpaper pattern (topographic, radar, scope, rings, synthwave), corners and sound pack, with a live preview and a warning if text would be hard to read. Saving builds a sixth preset, "Custom", on the deck with the full set of themed files (windows, icons, wallpaper, login screen, boot animation, terminal, on-screen keyboard), the same as the built-in five. It can be removed again.
+
 ## Desktop and controls
 
 A Windows-style desktop that works equally well with touch, keyboard/trackpad and controller.
 
 - **Taskbar and start menu:** XFCE panel along the bottom, Whisker Menu as the start menu, open apps shown on the taskbar, tray on the right.
+- **Window layout:** two choices, switched with Super + Space, a Quick Settings tile or Settings > Personalization > Window layout. **Stack** (default, Windows style): windows overlap; drag to a screen edge or use Super + arrows to snap. **Split** (Omarchy style): windows tile side by side automatically, the newest gets the main (left) area and the rest stack on the right, with adjustable main width and gaps. Full-screen games and pop-ups are never tiled.
+- **Welcome tour:** on first login a short setup walks through colour preset, window layout, default browser and extra games, then shows a shortcut cheat sheet. It can be run again from the start menu or Settings > System > About.
 - **HUD widgets:** Conky widgets for battery and charging, CPU temp and usage, Wi-Fi and Bluetooth, and clock/date/weather. Each widget is its own file in `~/.config/conky/`, so any one can be turned on or off, moved, or set always-on-top.
 - **On-screen keyboard:** Onboard, off by default, with a keyboard button on the taskbar to bring it up.
 - **Controller as mouse:** AntiMicroX runs in the background. Hold Select + Start for 2 seconds to toggle mouse mode (left stick moves, A clicks, B right-clicks). In games, mouse mode is off.
@@ -92,23 +96,31 @@ Keyboard shortcuts:
 | Super + L | Lock |
 | Print Screen | Screenshot |
 | Super + Shift + S | Area screenshot |
+| Super + Space | Switch window layout (Stack / Split) |
+| Super + Arrows | Stack: snap left/right, maximise, minimise. Split: move to the window on that side |
+| Super + Shift + Arrows | Split: swap with the window on that side |
+| Super + Enter | Split: make this the main window |
+| Super + F | Split: float this window / tile it again |
+| Super + W | Close the window |
+
+Any of these can be changed, and you can add your own shortcuts that open any app, web app or command, in Settings > Bluetooth & devices > Keyboard.
 
 ## Settings app
 
 One Settings app laid out like Windows 11: a sidebar of categories on the left, pages on the right, a search box at the top, all drawn in the active colour preset. It replaces XFCE's scattered settings windows, so nothing ever needs a terminal.
 
 - **Open it:** Super + I, or the gear in the start menu.
-- **Quick Settings:** Super + A, or click the Wi-Fi/volume/battery icons on the taskbar. A Windows 11-style pop-up with tiles for Wi-Fi, Bluetooth, hotspot, VPN, on-screen keyboard, controller mouse mode and HUD on/off, plus volume and brightness sliders and a colour-preset picker.
+- **Quick Settings:** Super + A, or click the Wi-Fi/volume/battery icons on the taskbar. A Windows 11-style pop-up with tiles for Wi-Fi, Bluetooth, hotspot, VPN, on-screen keyboard, controller mouse mode, HUD on/off and Split windows, plus volume and brightness sliders and a colour-preset picker.
 - **Built as:** a Python + GTK app in the repo at `overlay/opt/nexus/settings/`, launched by `/usr/local/bin/nexus-settings`. Each page is a front end for the normal Linux tool underneath (NetworkManager, BlueZ, PipeWire, xrandr, xfconf, Conky configs, Timeshift), so settings stay compatible with the rest of the system.
 - **Touch and controller:** large rows and toggles, fully usable by finger or with the controller in mouse mode.
 
 | Category | Pages and options |
 | --- | --- |
 | System | Display (resolution, scale, rotation, brightness, night light), Sound (output/input device, volume, test speakers), Notifications (on/off, do not disturb), Power & battery (battery %, sleep timer, lid close action, performance mode), Storage (eMMC and micro SD usage, cleanup), About (callsign, board, OS version) |
-| Bluetooth & devices | Bluetooth (pair, connect, forget), Controller (pair, test buttons, mouse-mode combo, stick sensitivity), Keyboard (layout, repeat speed, shortcuts editor), Mouse & trackpad (speed, tap to click, scroll direction, natural scrolling), Touchscreen (calibrate, long-press time) |
+| Bluetooth & devices | Bluetooth (pair, connect, forget), Controller (pair, test buttons, mouse-mode combo, stick sensitivity), Keyboard (layout, repeat speed, shortcuts editor, your own shortcuts), Mouse & trackpad (speed, tap to click, scroll direction, natural scrolling), Touchscreen (calibrate, long-press time) |
 | Network & internet | Wi-Fi (scan, connect, saved networks), Hotspot (saved phone hotspots, auto-connect), VPN (Tailscale on/off, sign in, devices), Network shares (saved Windows shares), Airplane mode |
-| Personalization | Colour preset (five tiles with a live preview), Wallpaper, HUD widgets (pick which show, position, size, always-on-top), Taskbar (icon size, pinned apps, auto-hide), Start menu (pinned apps), Lock screen and login look, Boot animation (on/off), Sound theme (tactical / quiet / off), Fonts and text size |
-| Apps | Installed apps (open, uninstall), Default apps (browser, video player, text editor), Startup apps (on/off) |
+| Personalization | Colour preset (five tiles with a live preview), Custom colour preset, Window layout (Stack / Split), Wallpaper, HUD widgets (pick which show, position, size, always-on-top), Taskbar (icon size, pinned apps, auto-hide), Start menu (pinned apps), Lock screen and login look, Boot animation (on/off), Sound theme (tactical / quiet / off), Fonts and text size |
+| Apps | App Center (install extra browsers, games and game systems), Web apps (turn a website into an app), Installed apps (open, uninstall), Default apps (browser, video player, text editor), Startup apps (on/off) |
 | Accounts | Password, Callsign, Auto-lock time |
 | Time & language | Time zone, 12/24-hour clock, date format, weather location |
 | Gaming | Game launcher folder (`/mnt/sdcard/ROMs/`), Emulator performance mode, Controller layout per system, Minecraft memory limit |
@@ -140,6 +152,19 @@ Everything below is preinstalled in the image.
 | Snapshots | Timeshift | See Storage, updates and backups |
 | Remote desktop | Remmina | See Networking |
 | VPN | Tailscale | See Networking |
+
+### App Center (optional apps)
+
+Not preinstalled, so the image stays small. Settings > Apps > App Center installs or removes each one with a tap (needs internet). Everything comes from Debian stable, except emulator cores, which come from libretro's build server like the built-in ones. The list lives in `overlay/usr/share/nexus/appcenter.conf`; adding an app = adding a section to that file.
+
+| Category | Apps |
+| --- | --- |
+| Browsers | Firefox ESR, GNOME Web, Falkon (Chromium stays the built-in default; any of them can be made the default) |
+| Games | SuperTuxKart, SuperTux, Luanti, OpenTTD, Battle for Wesnoth, Neverball + Neverputt, Extreme Tux Racer, Hedgewars |
+| Casual games | Solitaire (AisleRiot), Mines, Sudoku, Mahjongg, Chess (with Stockfish), 2048 |
+| Emulator systems | Atari 2600/7800/Lynx, PC Engine / TurboGrafx-16 (and CD), WonderSwan (and Color), Nintendo DS, DOS (DOSBox Pure), ScummVM. They appear in ES-DE like the built-in systems |
+
+**Web apps:** Settings > Apps > Web apps turns any website into a start menu app with its own window, opened in the default browser.
 
 ## Networking
 

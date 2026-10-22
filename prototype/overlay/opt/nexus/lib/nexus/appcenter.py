@@ -85,6 +85,31 @@ def installed(entry):
     return all(core_path(core).exists() for core in entry.cores)
 
 
+def installed_map(entries):
+    packages = sorted({package for entry in entries if entry.kind == "apt" for package in entry.packages})
+    present = set()
+    if packages:
+        listing = run(["dpkg-query", "-W", "-f=${Package} ${db:Status-Abbrev}\n", *packages]).out
+        present = {line.split()[0] for line in listing.splitlines() if line.split()[1:2] == ["ii"]}
+    states = {}
+    for entry in entries:
+        if entry.kind == "apt":
+            states[entry.key] = all(package in present for package in entry.packages)
+        else:
+            states[entry.key] = installed(entry)
+    return states
+
+
+def launch_id(entry):
+    if entry.launch:
+        return entry.launch
+    for package in entry.packages[:1]:
+        for line in run(["dpkg-query", "-L", package]).out.splitlines():
+            if line.startswith("/usr/share/applications/") and line.endswith(".desktop"):
+                return line.rsplit("/", 1)[1]
+    return ""
+
+
 def installed_systems():
     systems = []
     for entry in load():

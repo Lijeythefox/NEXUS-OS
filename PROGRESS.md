@@ -25,6 +25,7 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
   - **Welcome tour** on first login (colours, layout, browser, game systems, shortcut cheat sheet).
   - New package: `gir1.2-wnck-3.0` (needed by the window layout helper).
   - The prototype check job now also test-builds a custom preset and checks the App Center list.
+  - Same day, second round ("add everything if users would enjoy it"): App Center now also offers GNOME Web and Falkon, 8 native Linux games (SuperTuxKart, SuperTux, Luanti, OpenTTD, Wesnoth, Neverball, Extreme Tux Racer, Hedgewars) and 6 casual games (Solitaire, Mines, Sudoku, Mahjongg, Chess, 2048). The welcome tour's games step shows them all. Brave and Vivaldi left out (Chromium underneath, outside software sources). `SPEC.md` updated with all of it.
   - Tested on the build server: tiling places windows to the pixel at 1024x600 with the real XFCE window manager; every new Settings page and every welcome step opens; core download and error messages work. Not tested: anything that needs the deck (pkexec password prompts, real installs, touch).
 
 ## Decisions made
@@ -43,8 +44,8 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 | PSP and Dreamcast | PPSSPP and Flycast as RetroArch cores (standalone apps not in Debian 13 for ARM). Approved 2026-10-02 |
 | Emulator cores | libretro nightly builds for ARM (no stable ARM builds exist). Approved 2026-10-02 |
 | Extra packages | The extra packages listed in `prototype/README.md` (Samba, ufw, light-locker, etc.). Approved 2026-10-02 |
-| Extra apps | Installed on demand from an App Center, not preinstalled. Firefox ESR plus extra emulator systems. Approved 2026-10-22 |
-| Customisation | Custom colour preset, your own shortcuts, web apps, first-login welcome tour, Stack/Split window layout. Approved 2026-10-22. Not yet in `SPEC.md` |
+| Extra apps | Installed on demand from an App Center, not preinstalled: 3 extra browsers, 14 games, 6 extra emulator systems. Debian stable only (cores from libretro). Approved 2026-10-22, in `SPEC.md` |
+| Customisation | Custom colour preset, your own shortcuts, web apps, first-login welcome tour, Stack/Split window layout. Approved 2026-10-22, in `SPEC.md` |
 
 ## What changed
 
@@ -68,6 +69,7 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - Wi-Fi/Bluetooth chip (AIC8800) on the mainline kernel comes from an Armbian extension. Might be less solid than on the vendor kernel.
 - The board might prefer a bootloader already on the eMMC over the SD card.
 - Prototype: Split layout moves windows with the window manager's normal "move/resize" requests. A few apps with a large minimum size (e.g. LibreOffice) may not shrink fully into a small stack slot on 1024x600.
+- Prototype: App Center package names were checked against Ubuntu 25.10 (which copies Debian 13's), because Debian's servers weren't reachable from the build server. If one fails to install on the deck, the App Center shows apt's error.
 - Prototype: App Center emulator cores are libretro nightlies, fetched at install time, so two decks can end up with slightly different core versions.
 - Prototype: GTK's blue "suggested action" button colour still shows in some older confirm dialogs (not from a preset). New buttons use the preset colour instead.
 
@@ -100,6 +102,7 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - [ ] Welcome tour appears on first login and each step works
 - [ ] App Center: Firefox ESR installs, opens, becomes default, removes
 - [ ] App Center: an emulator pack installs and its games show in ES-DE
+- [ ] App Center: a game (e.g. SuperTuxKart) and a casual game (e.g. Solitaire) install, Open works, controller works in SuperTuxKart
 - [ ] Web apps: add one, it appears in the start menu and opens in its own window
 - [ ] Custom colour preset: save, everything recolours, remove again
 - [ ] Window layout: Split tiles windows, Super + Arrows/Enter/F/W/Space work, Quick Settings tile works

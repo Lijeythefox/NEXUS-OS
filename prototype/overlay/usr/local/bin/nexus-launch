@@ -1,0 +1,19 @@
+#!/usr/bin/python3
+import sys
+
+import gi
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio
+
+if len(sys.argv) != 2:
+    print("usage: nexus-launch APP.desktop", file=sys.stderr)
+    sys.exit(2)
+try:
+    app = Gio.DesktopAppInfo.new(sys.argv[1])
+except TypeError:
+    app = None
+if app is None:
+    print(f"No app called {sys.argv[1]}", file=sys.stderr)
+    sys.exit(1)
+sys.exit(0 if app.launch([], None) else 1)

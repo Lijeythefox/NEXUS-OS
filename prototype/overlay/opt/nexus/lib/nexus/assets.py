@@ -1414,16 +1414,20 @@ def sound_packs(root):
         )
 
 
+def build_preset(preset, root, icons_root, sign):
+    print(f"[nexus-assets] {preset.name}", flush=True)
+    gtk_theme(preset, root)
+    icon_theme(preset, root, icons_root)
+    render_wallpaper(preset, root)
+    plymouth_theme(preset, sign, root)
+    terminal_scheme(preset, root)
+    onboard_theme(preset, root)
+
+
 def build_all(root, icons_root, sign, default_key):
     presets = list_presets(include_hidden=True)
     for preset in presets:
-        print(f"[nexus-assets] {preset.name}", flush=True)
-        gtk_theme(preset, root)
-        icon_theme(preset, root, icons_root)
-        render_wallpaper(preset, root)
-        plymouth_theme(preset, sign, root)
-        terminal_scheme(preset, root)
-        onboard_theme(preset, root)
+        build_preset(preset, root, icons_root, sign)
     sound_packs(root)
     render_login(load_preset(default_key), sign, Path(root) / "var/lib/nexus/login.png")
 
@@ -1443,6 +1447,11 @@ def main(argv=None):
     plymouth = sub.add_parser("plymouth")
     plymouth.add_argument("--callsign", required=True)
     plymouth.add_argument("--root", default="/")
+    single = sub.add_parser("preset")
+    single.add_argument("--key", required=True)
+    single.add_argument("--root", default="/")
+    single.add_argument("--icons", default="/usr/share/icons")
+    single.add_argument("--callsign", default="NEXUS")
     args = parser.parse_args(argv)
     if args.command == "build":
         build_all(args.root, args.icons, args.callsign, args.default)
@@ -1451,6 +1460,8 @@ def main(argv=None):
     elif args.command == "plymouth":
         for preset in list_presets(include_hidden=True):
             plymouth_theme(preset, args.callsign, args.root)
+    elif args.command == "preset":
+        build_preset(load_preset(args.key), args.root, args.icons, args.callsign)
     return 0
 
 

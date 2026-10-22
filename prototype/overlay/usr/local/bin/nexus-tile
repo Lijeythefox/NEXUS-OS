@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+import sys
+
+sys.path.insert(0, "/opt/nexus/lib")
+
+from nexus.tiler import send_main
+
+sys.exit(send_main(sys.argv[1:]))

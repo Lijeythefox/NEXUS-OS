@@ -16,6 +16,16 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - Phase 1 main build #1 succeeded (2026-10-02).
 - Approved for the main build: the built-in controller helper, PPSSPP/Flycast as RetroArch cores, nightly libretro cores, and the extra packages. The other differences in `prototype/README.md` (Timeshift folder, weather source, Hotspot tile, menu sound, window corners) are still open.
 - `SPEC.md` updated (with Elijah's OK): flashing now goes through a spare SD card, and the Pico also reads the battery voltage.
+- 2026-10-22, "more customisable and user friendly" (prototype only, details in `prototype/README.md` > Customising your deck):
+  - **App Center** (Settings > Apps): one-tap install/remove of Firefox ESR and extra emulator systems (Atari 2600/7800/Lynx, PC Engine, WonderSwan, Nintendo DS, DOS, ScummVM). Nothing extra is baked into the image. The list is `prototype/overlay/usr/share/nexus/appcenter.conf`.
+  - **Web apps** (Settings > Apps): turn a website into a start menu app.
+  - **Custom colour preset** (Settings > Personalization): pick your own five colours; builds a sixth preset on the deck.
+  - **Window layout**: Stack (Windows style) or Split (Omarchy-style auto tiling). Super + Space, a Quick Settings tile, or Settings > Personalization > Window layout. Runs as a small background helper, `nexus-tiler`.
+  - **Your own shortcuts** (Settings > Bluetooth & devices > Keyboard).
+  - **Welcome tour** on first login (colours, layout, browser, game systems, shortcut cheat sheet).
+  - New package: `gir1.2-wnck-3.0` (needed by the window layout helper).
+  - The prototype check job now also test-builds a custom preset and checks the App Center list.
+  - Tested on the build server: tiling places windows to the pixel at 1024x600 with the real XFCE window manager; every new Settings page and every welcome step opens; core download and error messages work. Not tested: anything that needs the deck (pkexec password prompts, real installs, touch).
 
 ## Decisions made
 
@@ -33,6 +43,8 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 | PSP and Dreamcast | PPSSPP and Flycast as RetroArch cores (standalone apps not in Debian 13 for ARM). Approved 2026-10-02 |
 | Emulator cores | libretro nightly builds for ARM (no stable ARM builds exist). Approved 2026-10-02 |
 | Extra packages | The extra packages listed in `prototype/README.md` (Samba, ufw, light-locker, etc.). Approved 2026-10-02 |
+| Extra apps | Installed on demand from an App Center, not preinstalled. Firefox ESR plus extra emulator systems. Approved 2026-10-22 |
+| Customisation | Custom colour preset, your own shortcuts, web apps, first-login welcome tour, Stack/Split window layout. Approved 2026-10-22. Not yet in `SPEC.md` |
 
 ## What changed
 
@@ -55,6 +67,9 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - Armbian clones its desktop definitions (`armbian/configng`) from its `main` branch during the build, so that part isn't pinned. If a build suddenly breaks without us changing anything, this is a likely cause.
 - Wi-Fi/Bluetooth chip (AIC8800) on the mainline kernel comes from an Armbian extension. Might be less solid than on the vendor kernel.
 - The board might prefer a bootloader already on the eMMC over the SD card.
+- Prototype: Split layout moves windows with the window manager's normal "move/resize" requests. A few apps with a large minimum size (e.g. LibreOffice) may not shrink fully into a small stack slot on 1024x600.
+- Prototype: App Center emulator cores are libretro nightlies, fetched at install time, so two decks can end up with slightly different core versions.
+- Prototype: GTK's blue "suggested action" button colour still shows in some older confirm dialogs (not from a preset). New buttons use the preset colour instead.
 
 ## Needs device test
 
@@ -82,6 +97,13 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - [ ] Touch: long-press gives a right-click
 - [ ] Micro SD: Settings > System > Storage > Prepare card, then games/files/snapshots folders appear
 - [ ] Pico lid sensor and battery level (once the Pico is wired)
+- [ ] Welcome tour appears on first login and each step works
+- [ ] App Center: Firefox ESR installs, opens, becomes default, removes
+- [ ] App Center: an emulator pack installs and its games show in ES-DE
+- [ ] Web apps: add one, it appears in the start menu and opens in its own window
+- [ ] Custom colour preset: save, everything recolours, remove again
+- [ ] Window layout: Split tiles windows, Super + Arrows/Enter/F/W/Space work, Quick Settings tile works
+- [ ] Your own shortcut: add one that opens an app, it works, remove it
 
 ## Questions to settle in later phases
 

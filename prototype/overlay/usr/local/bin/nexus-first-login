@@ -19,6 +19,18 @@ shortcut "<Primary><Shift>Escape" "xfce4-taskmanager"
 shortcut "XF86AudioRaiseVolume" "nexus-volume up"
 shortcut "XF86AudioLowerVolume" "nexus-volume down"
 shortcut "XF86AudioMute" "nexus-volume mute"
+shortcut "<Super>space" "nexus-tile layout"
+shortcut "<Super>Left" "nexus-tile left"
+shortcut "<Super>Right" "nexus-tile right"
+shortcut "<Super>Up" "nexus-tile up"
+shortcut "<Super>Down" "nexus-tile down"
+shortcut "<Shift><Super>Left" "nexus-tile swap-left"
+shortcut "<Shift><Super>Right" "nexus-tile swap-right"
+shortcut "<Shift><Super>Up" "nexus-tile swap-up"
+shortcut "<Shift><Super>Down" "nexus-tile swap-down"
+shortcut "<Super>Return" "nexus-tile main"
+shortcut "<Super>f" "nexus-tile float"
+shortcut "<Super>w" "nexus-tile close"
 
 gsettings set org.onboard.window docking-enabled true 2>/dev/null
 gsettings set org.onboard.window force-to-top true 2>/dev/null

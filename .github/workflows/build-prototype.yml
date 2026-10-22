@@ -71,6 +71,18 @@ jobs:
           find /tmp/assets-check -maxdepth 4 -type d | head -40
           test -s /tmp/assets-check/var/lib/nexus/login.png
           test -s /tmp/assets-check/usr/share/themes/NEXUS-Amber/gtk-3.0/gtk.css
+          cp "$NEXUS_PRESET_DIR/blue.conf" /tmp/custom.conf
+          sed -i 's/^NAME=.*/NAME=Check/' /tmp/custom.conf
+          mkdir -p /tmp/custom-presets && cp "$NEXUS_PRESET_DIR"/*.conf /tmp/custom.conf /tmp/custom-presets/
+          NEXUS_PRESET_DIR=/tmp/custom-presets python3 -m nexus.assets preset --key custom --root /tmp/assets-custom
+          test -s /tmp/assets-custom/usr/share/themes/NEXUS-Custom/gtk-3.0/gtk.css
+
+      - name: Check App Center list
+        run: |
+          set -e
+          export PYTHONPATH="$PROTO/overlay/opt/nexus/lib" NEXUS_SHARE_DIR="$PROTO/overlay/usr/share/nexus"
+          python3 -c "from nexus import appcenter; entries = appcenter.load(); assert entries, 'App Center list is empty'; print(len(entries), 'App Center entries')"
+          test "$(grep -c '^\[' "$PROTO/overlay/usr/share/nexus/appcenter.conf")" = "$(python3 -c 'from nexus import appcenter; print(len(appcenter.load()))')"
 
   build:
     needs: check

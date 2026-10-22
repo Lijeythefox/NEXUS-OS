@@ -58,6 +58,7 @@ xfce4-docklike-plugin
 xfce4-whiskermenu-plugin
 python3-gi
 gir1.2-gtk-3.0
+gir1.2-wnck-3.0
 python3-serial
 python3-evdev
 pulseaudio-utils

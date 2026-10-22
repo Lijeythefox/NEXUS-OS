@@ -85,7 +85,7 @@ class SettingsWindow(Gtk.ApplicationWindow):
         self.back_button = Gtk.Button.new_from_icon_name("go-previous-symbolic", Gtk.IconSize.BUTTON)
         self.back_button.connect("clicked", lambda _: self.back())
         header.add(self.back_button)
-        titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.crumb = label("", "nexus-crumb")
         self.heading = label("", "nexus-heading")
         titles.add(self.crumb)

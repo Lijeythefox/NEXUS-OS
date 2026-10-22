@@ -3,6 +3,7 @@ from pathlib import Path
 
 from gi.repository import Gio, Gtk
 
+from nexus import appcenter, webapps
 from nexus.common import Settings, out, root, spawn
 from nexus_settings.ui import Page, ask_text, confirm
 
@@ -14,6 +15,133 @@ DEFAULT_TYPES = [
     ("Photo viewer", ["image/png", "image/jpeg"]),
     ("PDF viewer", ["application/pdf"]),
 ]
+
+
+def desktop_app(app_id):
+    try:
+        return Gio.DesktopAppInfo.new(app_id)
+    except TypeError:
+        return None
+
+
+def set_default_app(app_id, mimes):
+    app = desktop_app(app_id)
+    if not app:
+        return None
+    for mime in mimes:
+        try:
+            app.set_as_default_for_type(mime)
+        except Exception:
+            continue
+    return app.get_display_name()
+
+
+def default_browser_id():
+    app = Gio.AppInfo.get_default_for_type(DEFAULT_TYPES[0][1][0], False)
+    return app.get_id() if app else ""
+
+
+def launch_desktop(app_id):
+    app = desktop_app(app_id)
+    return bool(app) and app.launch([], None)
+
+
+class AppCenterPage(Page):
+    def build(self):
+        self.note("Extra browsers and game systems you can add or remove at any time. Installing needs internet. "
+                  "Your files and games are never touched.")
+        entries = appcenter.load()
+        if not entries:
+            self.note("The App Center list is empty.")
+            return
+        browser = default_browser_id()
+        for category in appcenter.categories(entries):
+            self.section(category)
+            for entry in (item for item in entries if item.category == category):
+                self.entry_row(entry, appcenter.installed(entry), browser)
+
+    def entry_row(self, entry, installed, browser):
+        actions = []
+        status = ""
+        if installed:
+            if entry.launch:
+                actions.append(("Open", lambda item=entry: launch_desktop(item.launch)))
+            if entry.browser:
+                if entry.launch == browser:
+                    status = "Default browser"
+                else:
+                    actions.append(("Make default", lambda item=entry: self.make_default(item)))
+            if entry.kind != "builtin":
+                actions.append(("Remove", lambda item=entry: self.remove(item)))
+            status = status or ("Built in" if entry.kind == "builtin" else "Installed")
+        else:
+            actions.append(("Install", lambda item=entry: self.install(item)))
+        subtitle = entry.description + (f"  ·  {status}" if status else "")
+        self.buttons(entry.name, subtitle, actions)
+
+    def install(self, entry):
+        self.root_task(lambda: root("app-install", entry.key), f"{entry.name} installed",
+                       busy=f"Installing {entry.name}...")
+
+    def remove(self, entry):
+        extra = " Your games stay on the card." if entry.kind == "core" else ""
+        if confirm(self.window, f"Remove {entry.name}?{extra}", "Remove", danger=True):
+            self.root_task(lambda: root("app-remove", entry.key), f"{entry.name} removed",
+                           busy=f"Removing {entry.name}...")
+
+    def make_default(self, entry):
+        name = set_default_app(entry.launch, DEFAULT_TYPES[0][1])
+        self.window.toast(f"{name} is now the default browser" if name else "That browser isn't installed")
+        self.rebuild()
+
+
+class WebAppsPage(Page):
+    def build(self):
+        self.note("Turn any website into an app with its own start menu entry and window. "
+                  "It opens in your default browser (as an app window in Chromium, a new window in Firefox).")
+        self.button("Add a web app", "Any web address", "Add", self.add_webapp)
+        mine = webapps.listing()
+        self.section("Your web apps")
+        if not mine:
+            self.note("None yet. Add one above or pick a suggestion below.")
+        for app in mine:
+            self.buttons(app["name"], app["url"], [
+                ("Open", lambda slug=app["slug"]: spawn(["nexus-webapp", slug])),
+                ("Remove", lambda item=app: self.remove(item)),
+            ])
+        taken = {app["url"] for app in mine}
+        self.section("Suggestions")
+        for name, url in webapps.SUGGESTIONS:
+            if url not in taken:
+                self.button(name, url, "Add", lambda n=name, u=url: self.create(n, u))
+        self.note("Netflix, Disney+ and Spotify need copy protection (DRM) that browsers on ARM boards don't have, "
+                  "so they usually won't play.")
+
+    def add_webapp(self):
+        url = ask_text(self.window, "Add a web app", "Web address, for example music.youtube.com")
+        if not url:
+            return
+        try:
+            url = webapps.clean_url(url)
+        except ValueError as error:
+            self.window.toast(str(error))
+            return
+        suggestion = url.split("://", 1)[1].split("/")[0].removeprefix("www.").split(".")[0].title()
+        name = ask_text(self.window, "Add a web app", "Name in the start menu", suggestion)
+        if name:
+            self.create(name, url)
+
+    def create(self, name, url):
+        def done(result, error):
+            self.window.toast(str(error) if error else f"{name} added to the start menu")
+            self.rebuild()
+
+        self.task(lambda: webapps.add(name, url), done, busy="Fetching the site's icon...")
+
+    def remove(self, app):
+        if confirm(self.window, f"Remove the {app['name']} web app?", "Remove", danger=True):
+            webapps.remove(app["slug"])
+            self.rebuild()
 
 
 class InstalledPage(Page):
@@ -62,15 +190,9 @@ class DefaultsPage(Page):
                        lambda app_id, mimes=types: self.set_default(app_id, mimes))
 
     def set_default(self, app_id, mimes):
-        app = Gio.DesktopAppInfo.new(app_id)
-        if not app:
-            return
-        for mime in mimes:
-            try:
-                app.set_as_default_for_type(mime)
-            except Exception:
-                continue
-        self.window.toast(f"{app.get_display_name()} is now the default")
+        name = set_default_app(app_id, mimes)
+        if name:
+            self.window.toast(f"{name} is now the default")
 
 
 def autostart_entries():
@@ -132,6 +254,9 @@ class AiPage(Page):
 
 
 PAGES = [
+    ("appcenter", "App Center", "Add browsers and game systems", "install store browser firefox emulator games add apps",
+     AppCenterPage),
+    ("webapps", "Web apps", "Turn websites into apps", "web app website pwa youtube discord shortcut", WebAppsPage),
     ("installed", "Installed apps", "Open or uninstall", "apps programs uninstall remove", InstalledPage),
     ("defaults", "Default apps", "Browser, video player, text editor", "default open with browser", DefaultsPage),
     ("startup", "Startup apps", "Turn login apps on or off", "autostart startup login", StartupPage),

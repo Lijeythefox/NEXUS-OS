@@ -6,7 +6,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, Gio, GLib, Gtk
 
-from nexus import battery, hud, system
+from nexus import battery, hud, system, tiler
 from nexus.common import Settings, callsign, spawn
 from nexus.presets import active_key, list_presets
 from nexus_settings.pages.personal import apply_preset, draw_preset
@@ -31,6 +31,7 @@ TILES = [
     ("hud", "HUD", "view-grid-symbolic", hud.running, hud.set_visible),
     ("airplane", "Airplane", "airplane-mode-symbolic", system.airplane_get, system.airplane_set),
     ("dnd", "Do not disturb", "notifications-disabled-symbolic", system.dnd_get, system.dnd_set),
+    ("split", "Split windows", "view-dual-symbolic", tiler.split_enabled, tiler.set_split),
 ]
 
 

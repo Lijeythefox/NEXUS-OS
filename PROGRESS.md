@@ -92,3 +92,18 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - Quick Settings "hotspot" tile: connect to phone hotspot, or make the deck a hotspot? (Phase 5)
 - Weather source: Open-Meteo (free, no account)? (Phase 4)
 - How the micro SD gets formatted to ext4 (first-boot step or Settings > Storage)
+
+## OptiPlex 3060 SFF (x86) build — 26 Oct 2026
+
+- `config/board.conf` and `prototype/config/board.conf` now say `BOARD=uefi-x86` (Armbian's generic x86 PC target, kernel 6.18 on `current`). Set `BOARD=rpi4b` to go back to the deck.
+- New `prototype/config/downloads-amd64.txt`: x86 versions of FreeTube, Legcord, ES-DE 3.5.0, Prism Launcher and the 12 emulator cores. The prototype workflow uses it automatically when the board is `uefi-x86`.
+- `prototype/userpatches/customize-image.sh`: the emulator core folder follows the CPU type; RetroArch, ES-DE and Prism Launcher paths switch to x86_64 on x86 builds; on `uefi-x86` the Pico sensor autostart and the battery HUD widget are switched off.
+- New `docs/INSTALL-OPTIPLEX.md`: flashing a USB stick, BIOS settings (UEFI, Secure Boot off, SATA = AHCI), installing to the internal drive.
+
+### OptiPlex: needs device test
+- [ ] Prototype build goes green with `BOARD=uefi-x86`
+- [ ] Boots from the USB stick (F12 → UEFI BOOT) to the NEXUS login
+- [ ] Desktop, taskbar, start menu and HUD (no battery widget) appear at the monitor's own resolution
+- [ ] Ethernet and sound work
+- [ ] RetroArch/ES-DE find the cores; Prism Launcher starts Minecraft
+- [ ] `sudo armbian-install` installs to the internal drive and boots without the stick

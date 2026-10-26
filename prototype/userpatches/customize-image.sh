@@ -12,7 +12,11 @@ STAGING="$OVERLAY/.nexus-build"
 DOWNLOADS="$STAGING/downloads"
 NEXUS_HOSTNAME=nexus
 DEFAULT_PRESET=amber
-LIBRETRO_DIR="/usr/lib/aarch64-linux-gnu/libretro"
+case "$ARCH" in
+amd64) MULTIARCH=x86_64-linux-gnu ;;
+*) MULTIARCH=aarch64-linux-gnu ;;
+esac
+LIBRETRO_DIR="/usr/lib/$MULTIARCH/libretro"
 export DEBIAN_FRONTEND=noninteractive
 
 log() {
@@ -127,6 +131,37 @@ copy_overlay() {
 	chmod 0644 /etc/systemd/system/nexus-firstboot.service
 }
 
+fix_arch_paths() {
+	[[ "$ARCH" == amd64 ]] || return 0
+	log "Pointing emulator and Java paths at x86_64"
+	local file
+	for file in /etc/skel/.config/retroarch/retroarch.cfg \
+		/etc/skel/ES-DE/custom_systems/es_find_rules.xml \
+		/etc/skel/.local/share/PrismLauncher/prismlauncher.cfg; do
+		[[ -f "$file" ]] || continue
+		sed -i -e 's#aarch64-linux-gnu#x86_64-linux-gnu#g' -e 's#java-21-openjdk-arm64#java-21-openjdk-amd64#g' "$file"
+	done
+}
+
+desktop_pc_tweaks() {
+	[[ "$BOARD" == uefi-x86 ]] || return 0
+	log "Desktop PC build: switching off the deck-only Pico sensor and battery widget"
+	hide_autostart nexus-pico.desktop
+	local hud=/usr/share/nexus/defaults/hud.conf
+	if [[ -f "$hud" ]]; then
+		python3 - "$hud" <<'PY'
+import configparser, sys
+path = sys.argv[1]
+c = configparser.ConfigParser()
+c.read(path)
+if c.has_section("battery"):
+    c.set("battery", "enabled", "0")
+with open(path, "w") as handle:
+    c.write(handle)
+PY
+	fi
+}
+
 hide_autostart() {
 	local file="/etc/xdg/autostart/$1"
 	[[ -f "$file" ]] || return 0
@@ -220,6 +255,8 @@ main() {
 	install_packages
 	install_downloads
 	copy_overlay
+	fix_arch_paths
+	desktop_pc_tweaks
 	configure_desktop
 	configure_system
 	set_hostname

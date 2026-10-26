@@ -119,6 +119,22 @@ jobs:
           ref: ${{ env.ARMBIAN_REF }}
           path: build
 
+      - name: Drop Apple MacBook kernel patches (x86 builds only)
+        if: env.BOARD == 'uefi-x86'
+        run: |
+          # Armbian adds MacBook T2 fixes (apple-bce, applesmc, Asahi trackpad, MacBook display quirk)
+          # to every x86 kernel. They no longer apply to the newest 6.18 kernel and stop the build.
+          # A normal PC like the OptiPlex doesn't need them, so remove them from this build only.
+          shopt -s nullglob
+          for dir in build/patch/kernel/archive/uefi-x86-*; do
+            for patch in "$dir"/[1-4][0-9][0-9][0-9]-*.patch; do
+              echo "Removing $patch"
+              rm -f "$patch"
+            done
+            echo "Kept in $dir:"
+            ls "$dir"
+          done
+
       - name: Download apps, emulator cores, fonts and keys
         run: |
           staging=build/userpatches/overlay/.nexus-build

@@ -123,7 +123,12 @@ jobs:
         run: |
           staging=build/userpatches/overlay/.nexus-build
           mkdir -p "$staging"
-          bash "$PROTO/tools/fetch-downloads.sh" "$PROTO/config/downloads.txt" "$staging/downloads"
+          list="$PROTO/config/downloads.txt"
+          if [[ "$BOARD" == uefi-x86 && -f "$PROTO/config/downloads-amd64.txt" ]]; then
+            list="$PROTO/config/downloads-amd64.txt"
+          fi
+          echo "Using download list $list"
+          bash "$PROTO/tools/fetch-downloads.sh" "$list" "$staging/downloads"
           mkdir -p ~/.local/share/fonts
           cp "$staging"/downloads/fonts/*.ttf ~/.local/share/fonts/
           fc-cache -f

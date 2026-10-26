@@ -107,3 +107,7 @@ Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that 
 - [ ] Ethernet and sound work
 - [ ] RetroArch/ES-DE find the cores; Prism Launcher starts Minecraft
 - [ ] `sudo armbian-install` installs to the internal drive and boots without the stick
+
+### OptiPlex build fix — 26 Oct 2026
+- First x86 build (run #8) failed while patching the kernel: three of Armbian's Apple MacBook T2 patches (`2008-i915-4-lane-quirk-for-mbp15-1`, `3001-applesmc-...`, `4001-asahi-trackpad`) no longer apply to the newest Linux 6.18.
+- `.github/workflows/build-prototype.yml` now removes Armbian's MacBook-only x86 patches (numbers 1xxx-4xxx in `patch/kernel/archive/uefi-x86-*`) before building. Only runs when `BOARD=uefi-x86`. The Intel graphics patch `7001` is kept.

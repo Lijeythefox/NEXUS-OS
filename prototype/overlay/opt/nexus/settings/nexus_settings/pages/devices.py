@@ -6,7 +6,7 @@ from gi.repository import Gdk, GLib, Gtk
 
 from nexus import devices, system
 from nexus.common import Settings, out, root, run, xfconf_get, xfconf_list, xfconf_set
-from nexus_settings.ui import Page, background, confirm, label, styled
+from nexus_settings.ui import Page, ask_text, background, choose, confirm, label, styled
 
 
 class BluetoothPage(Page):
@@ -123,7 +123,41 @@ SHORTCUTS = [
     ("Screenshot", "nexus-screenshot full"),
     ("Area screenshot", "nexus-screenshot area"),
     ("Task manager", "xfce4-taskmanager"),
+    ("Switch window layout (Stack / Split)", "nexus-tile layout"),
+    ("Make this the main window (Split)", "nexus-tile main"),
+    ("Float this window (Split)", "nexus-tile float"),
+    ("Close the window", "nexus-tile close"),
 ]
+SYSTEM_PREFIXES = ("nexus-tile ", "nexus-volume ")
+SHORTCUT_ROOT = "/commands/custom/"
+TYPE_COMMAND = "__command__"
+
+
+def custom_shortcuts():
+    built_in = {command for _, command in SHORTCUTS}
+    found = []
+    for prop in xfconf_list("xfce4-keyboard-shortcuts"):
+        if not prop.startswith(SHORTCUT_ROOT) or prop == SHORTCUT_ROOT + "override":
+            continue
+        command = xfconf_get("xfce4-keyboard-shortcuts", prop) or ""
+        if command and command not in built_in and not command.startswith(SYSTEM_PREFIXES):
+            found.append((prop[len(SHORTCUT_ROOT):], command))
+    return sorted(found, key=lambda item: shortcut_title(item[1]).lower())
+
+
+def shortcut_title(command):
+    if command.startswith("nexus-launch "):
+        from nexus_settings.pages.apps import desktop_app
+
+        app = desktop_app(command.split(" ", 1)[1])
+        if app:
+            return f"Open {app.get_display_name()}"
+    return command
+
+
+def readable(accel):
+    key, mods = Gtk.accelerator_parse(accel)
+    return Gtk.accelerator_get_label(key, mods) if key else accel
 
 
 def current_binding(command):
@@ -148,12 +182,36 @@ class KeyboardPage(Page):
         self.section("Shortcuts")
         for title, command in SHORTCUTS:
             binding = current_binding(command)
-            self.button(title, binding or "Not set", "Change", lambda cmd=command, old=binding: self.change(cmd, old))
+            self.button(title, readable(binding) if binding else "Not set", "Change",
+                        lambda cmd=command, old=binding: self.change(cmd, old))
+        self.section("Your own shortcuts")
+        self.button("Add a shortcut", "Open any app, web app or command with a key combination", "Add", self.add_shortcut)
+        for accel, command in custom_shortcuts():
+            self.buttons(shortcut_title(command), readable(accel), [
+                ("Change", lambda cmd=command, old=accel: self.change(cmd, old)),
+                ("Remove", lambda old=accel: self.remove(old)),
+            ])
 
     def set_layout(self, layout):
         xfconf_set("keyboard-layout", "/Default/XkbDisable", False)
         xfconf_set("keyboard-layout", "/Default/XkbLayout", layout)
         run(["setxkbmap", layout])
+
+    def add_shortcut(self):
+        from nexus_settings.pages.personal import app_choices
+
+        choice = choose(self.window, "What should the shortcut open?",
+                        [(TYPE_COMMAND, "Type a command...")] + app_choices(), searchable=True)
+        if choice == TYPE_COMMAND:
+            command = (ask_text(self.window, "Add a shortcut", "Command to run, for example: mousepad") or "").strip()
+        else:
+            command = f"nexus-launch {choice}" if choice else ""
+        if command:
+            self.change(command, None)
+
+    def remove(self, accel):
+        run(["xfconf-query", "-c", "xfce4-keyboard-shortcuts", "-p", SHORTCUT_ROOT + accel, "-r"])
+        self.rebuild()
 
     def change(self, command, old):
         dialog = Gtk.Dialog(title="New shortcut", transient_for=self.window, modal=True)
@@ -180,10 +238,16 @@ class KeyboardPage(Page):
         if response == Gtk.ResponseType.REJECT and old:
             run(["xfconf-query", "-c", "xfce4-keyboard-shortcuts", "-p", f"/commands/custom/{old}", "-r"])
         elif response == Gtk.ResponseType.OK and result["accel"]:
+            taken = xfconf_get("xfce4-keyboard-shortcuts", SHORTCUT_ROOT + result["accel"])
+            if taken and taken != command and not confirm(
+                    self.window, f"{readable(result['accel'])} already runs {shortcut_title(taken)}. Replace it?",
+                    "Replace"):
+                self.rebuild()
+                return
             if old:
                 run(["xfconf-query", "-c", "xfce4-keyboard-shortcuts", "-p", f"/commands/custom/{old}", "-r"])
             xfconf_set("xfce4-keyboard-shortcuts", f"/commands/custom/{result['accel']}", command)
-            self.window.toast(f"Shortcut set to {result['accel']}")
+            self.window.toast(f"Shortcut set to {readable(result['accel'])}")
         self.rebuild()
 
 

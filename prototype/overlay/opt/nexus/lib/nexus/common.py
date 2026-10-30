@@ -160,8 +160,8 @@ def sound(event):
     spawn(["nexus-sound", event])
 
 
-def root_quick(*args):
-    return run(["pkexec", "/usr/local/sbin/nexus-root-quick", *args], timeout=600)
+def root_quick(*args, input_text=None):
+    return run(["pkexec", "/usr/local/sbin/nexus-root-quick", *args], input_text=input_text, timeout=600)
 
 
 def root(*args, input_text=None, timeout=3600):

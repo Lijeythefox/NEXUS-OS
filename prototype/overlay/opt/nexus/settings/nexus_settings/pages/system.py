@@ -258,6 +258,9 @@ class AboutPage(Page):
         self.info("Debian", read_text("/etc/debian_version", "?"))
         self.info("Kernel", out(["uname", "-r"]))
         self.info("Colour preset", active_preset().name)
+        self.section("Setup")
+        self.button("Welcome tour", "Pick colours, window layout, browser and game systems again", "Start",
+                    lambda: spawn(["nexus-welcome"]))
 
 
 PAGES = [

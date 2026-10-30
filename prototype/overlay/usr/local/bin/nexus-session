@@ -19,3 +19,7 @@ nexus-theme apply
 nexus-apply all
 nexus-hud login
 nexus-sound startup
+
+if [[ ! -f "$cfg/.welcome-done" ]]; then
+	nexus-welcome &
+fi

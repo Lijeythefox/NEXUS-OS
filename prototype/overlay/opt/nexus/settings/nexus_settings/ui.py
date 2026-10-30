@@ -33,6 +33,9 @@ APP_CSS = Template("""
 .nexus-toast { background-color: $surface_hi; border: 1px solid $primary; border-radius: ${radius}px; padding: 8px 16px; color: $text_hi; }
 .nexus-preset { background-color: transparent; border: 2px solid $grid; border-radius: ${radius}px; padding: 4px; }
 .nexus-preset.active { border-color: $primary; }
+.nexus-primary { background-image: none; background-color: $primary; border-color: $primary; color: $on_primary; }
+.nexus-primary label { color: $on_primary; }
+.nexus-primary:hover { background-color: $text_hi; border-color: $text_hi; }
 """)
 
 _provider = None
@@ -316,7 +319,7 @@ class Page(Gtk.ScrolledWindow):
 
         background(work, finished)
 
-    def root_task(self, result_work, ok_text, refresh=True):
+    def root_task(self, result_work, ok_text, refresh=True, busy="Working..."):
         def done(result, error):
             if error:
                 self.window.toast(str(error))
@@ -330,4 +333,4 @@ class Page(Gtk.ScrolledWindow):
             if refresh:
                 self.rebuild()
 
-        self.task(result_work, done)
+        self.task(result_work, done, busy)

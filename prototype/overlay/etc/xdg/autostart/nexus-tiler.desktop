@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NEXUS window layout
+Comment=Stack or Split window layout (Settings > Personalization > Window layout)
+Exec=nexus-tiler
+Icon=view-dual-symbolic
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

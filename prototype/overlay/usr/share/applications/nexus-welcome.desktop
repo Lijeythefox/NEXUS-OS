@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Welcome tour
+GenericName=NEXUS Welcome
+Comment=Pick your colours, window layout, browser and games again
+Exec=nexus-welcome
+Icon=nexus-settings
+Terminal=false
+Categories=Settings;
+Keywords=welcome;setup;tour;first;start;

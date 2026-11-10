@@ -37,10 +37,14 @@ echo "::endgroup::"
 echo "::group::Verify the Hyprland config"
 install -d -m 0700 -o tester -g tester /tmp/xdg-tester
 su tester -c 'nexus-theme ensure && ls ~/.config/nexus/current' >"$OUT/verify.log" 2>&1
-su tester -c 'XDG_RUNTIME_DIR=/tmp/xdg-tester NEXUS_STRICT=1 Hyprland --verify-config' >>"$OUT/verify.log" 2>&1
+# The packaged Hyprland binary carries an extra file permission (for smoother scheduling)
+# that an ordinary container may not run. A plain copy has none and checks the config the same way.
+cp /usr/bin/Hyprland /tmp/Hyprland-check
+chmod 0755 /tmp/Hyprland-check
+su tester -c 'XDG_RUNTIME_DIR=/tmp/xdg-tester NEXUS_STRICT=1 /tmp/Hyprland-check --verify-config' >>"$OUT/verify.log" 2>&1
 verify_rc=$?
 cat "$OUT/verify.log"
-if ((verify_rc == 0)) && ! grep -qiE 'config error|error in|errors found' "$OUT/verify.log"; then
+if ((verify_rc == 0)) && grep -q 'config ok' "$OUT/verify.log"; then
 	result "VERIFY=ok"
 else
 	result "VERIFY=FAILED (exit $verify_rc)"

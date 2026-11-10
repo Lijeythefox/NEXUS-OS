@@ -35,8 +35,9 @@ useradd -m -s /bin/bash tester
 echo "::endgroup::"
 
 echo "::group::Verify the Hyprland config"
+install -d -m 0700 -o tester -g tester /tmp/xdg-tester
 su tester -c 'nexus-theme ensure && ls ~/.config/nexus/current' >"$OUT/verify.log" 2>&1
-su tester -c 'NEXUS_STRICT=1 Hyprland --verify-config' >>"$OUT/verify.log" 2>&1
+su tester -c 'XDG_RUNTIME_DIR=/tmp/xdg-tester NEXUS_STRICT=1 Hyprland --verify-config' >>"$OUT/verify.log" 2>&1
 verify_rc=$?
 cat "$OUT/verify.log"
 if ((verify_rc == 0)) && ! grep -qiE 'config error|error in|errors found' "$OUT/verify.log"; then
@@ -50,7 +51,6 @@ echo "::endgroup::"
 echo "::group::Run the desktop without a screen"
 ls -l /dev/dri 2>&1 | tee "$OUT/dri.txt"
 chmod -R a+rw /dev/dri 2>/dev/null
-install -d -m 0700 -o tester -g tester /tmp/xdg-tester
 cp ci/headless-session.sh /tmp/headless-session.sh
 chmod 0755 /tmp/headless-session.sh
 install -d -o tester -g tester /tmp/shots

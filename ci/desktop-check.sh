@@ -2,7 +2,7 @@
 # Runs inside a debian:trixie container on GitHub (see .github/workflows/check.yml).
 #   1. installs the real package lists (fails the check if anything is missing)
 #   2. copies overlay/ into place and verifies the Hyprland config (fails the check on errors)
-#   3. starts the whole desktop without a screen and takes screenshots (information only)
+#   3. checks the terminal and launcher configs and that every command the desktop calls exists
 # Everything it learns is written to ci-out/.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -24,7 +24,7 @@ tail -n 5 "$OUT/packages.log"
 dpkg-query -W -f='${Package} ${Version}\n' hyprland hyprlock hypridle hyprpolkitagent xdg-desktop-portal-hyprland \
 	waybar fuzzel mako-notifier swayosd foot libgl1-mesa-dri >"$OUT/versions.txt" 2>&1
 cat "$OUT/versions.txt"
-apt-get install -y --no-install-recommends procps psmisc jq librsvg2-bin >>"$OUT/packages.log" 2>&1
+apt-get install -y --no-install-recommends jq librsvg2-bin >>"$OUT/packages.log" 2>&1
 echo "::endgroup::"
 
 echo "::group::Install overlay"
@@ -48,18 +48,20 @@ else
 fi
 echo "::endgroup::"
 
-echo "::group::Run the desktop without a screen"
-ls -l /dev/dri 2>&1 | tee "$OUT/dri.txt"
-chmod -R a+rw /dev/dri 2>/dev/null
-cp ci/headless-session.sh /tmp/headless-session.sh
-chmod 0755 /tmp/headless-session.sh
-install -d -o tester -g tester /tmp/shots
-timeout 240 su tester -c 'XDG_RUNTIME_DIR=/tmp/xdg-tester dbus-run-session -- /tmp/headless-session.sh /tmp/shots' >"$OUT/headless.log" 2>&1
-headless_rc=$?
-cat "$OUT/headless.log"
-cp /tmp/shots/* "$OUT/" 2>/dev/null
-cp /home/tester/hyprland-headless.log "$OUT/" 2>/dev/null
-if ((headless_rc == 0)); then result "HEADLESS=ok"; else result "HEADLESS=FAILED (exit $headless_rc)"; fi
+echo "::group::Check the launcher and terminal configs"
+cur=/home/tester/.config/nexus/current
+other=ok
+if ! su tester -c "foot --check-config -c $cur/foot.ini" >"$OUT/foot.log" 2>&1; then other=FAILED; fi
+cat "$OUT/foot.log"
+if ! su tester -c "fuzzel --check-config --config $cur/fuzzel.ini" >"$OUT/fuzzel.log" 2>&1; then other=FAILED; fi
+cat "$OUT/fuzzel.log"
+jq empty /usr/share/nexus/default/waybar/config.json || other=FAILED
+for command in waybar mako swayosd-server swayosd-client swaybg hyprlock hypridle grim slurp wl-copy notify-send \
+	brightnessctl playerctl thunar start-hyprland hyprctl Xwayland wpctl nmcli; do
+	command -v "$command" >/dev/null || { echo "missing command: $command"; other=FAILED; }
+done
+result "OTHER_CONFIGS=$other"
+[[ "$other" == ok ]] || exit 1
 echo "::endgroup::"
 
 chmod -R a+rX "$OUT"

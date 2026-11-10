@@ -30,30 +30,17 @@ jobs:
         run: bash ci/check-static.sh
 
   desktop:
-    name: Packages, Hyprland config and desktop test
+    name: Packages and Hyprland config
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Check out NEXUS OS
         uses: actions/checkout@v5
 
-      - name: Give the runner a virtual screen device
-        continue-on-error: true
-        run: |
-          sudo modprobe vkms || {
-            sudo apt-get update
-            sudo apt-get install -y "linux-modules-extra-$(uname -r)"
-            sudo modprobe vkms
-          }
-          sudo modprobe vgem || true
-          ls -l /dev/dri || true
-
-      - name: Install packages, verify the config, run the desktop without a screen
+      - name: Install packages and verify the configs in a clean Debian
         run: |
           mkdir -p ci-out
-          dri=()
-          if [[ -d /dev/dri ]]; then dri=(-v /dev/dri:/dev/dri); fi
-          docker run --rm --privileged "${dri[@]}" -v "$PWD:/src" -w /src debian:trixie bash ci/desktop-check.sh
+          docker run --rm -v "$PWD:/src" -w /src debian:trixie bash ci/desktop-check.sh
 
       - name: Show results
         if: always()

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Runs inside the image while GitHub builds it. Installs the NEXUS packages,
+# copies overlay/ into place and switches off services the desktop does not need.
 set -euo pipefail
 
 RELEASE="$1"
@@ -10,9 +12,34 @@ ARCH="$5"
 OVERLAY=/tmp/overlay
 STAGING="$OVERLAY/.nexus-build"
 NEXUS_HOSTNAME=nexus
+export DEBIAN_FRONTEND=noninteractive
 
 log() {
 	echo "[nexus] $*"
+}
+
+prepare_apt() {
+	log "Telling apt to keep existing config files instead of asking"
+	cat >/etc/apt/apt.conf.d/90nexus-noninteractive <<'CONF'
+Dpkg::Options {
+   "--force-confdef";
+   "--force-confold";
+};
+CONF
+}
+
+repair_dpkg() {
+	dpkg --configure -a || true
+	apt-get install -y -f || true
+}
+
+install_packages() {
+	log "Installing the NEXUS package lists"
+	if ! bash "$STAGING/install-packages.sh" "$STAGING/packages.txt" "$STAGING/packages-backports.txt"; then
+		log "Package install failed, repairing and trying once more"
+		repair_dpkg
+		bash "$STAGING/install-packages.sh" "$STAGING/packages.txt" "$STAGING/packages-backports.txt"
+	fi
 }
 
 copy_overlay() {
@@ -26,34 +53,35 @@ copy_overlay() {
 			--no-same-owner \
 			--no-overwrite-dir \
 			--keep-directory-symlink
-
-	if [[ -d "$OVERLAY/usr/local/bin" ]]; then
-		find "$OVERLAY/usr/local/bin" -type f ! -name .keep -printf '%P\n' |
-			while read -r tool; do
-				chmod 0755 "/usr/local/bin/$tool"
-			done
-	fi
+	chmod 0755 /usr/local/bin/nexus-* /usr/local/sbin/nexus-*
+	chmod 0644 /etc/profile.d/zz-nexus-session.sh "/etc/systemd/system/getty@tty1.service.d/zz-nexus.conf"
 }
 
-install_packages() {
-	local list="$STAGING/packages.txt"
-	local -a packages=()
+trim_services() {
+	log "Switching off services the desktop does not need"
+	local unit
+	for unit in cups.service cups.socket cups-browsed.service avahi-daemon.service avahi-daemon.socket \
+		ModemManager.service ssh.service ssh.socket; do
+		systemctl disable "$unit" 2>/dev/null || true
+	done
+	# Keep automatic updates from slowing down the first 10 minutes after boot.
+	for unit in apt-daily.timer apt-daily-upgrade.timer; do
+		install -d "/etc/systemd/system/$unit.d"
+		cat >"/etc/systemd/system/$unit.d/nexus.conf" <<'CONF'
+[Timer]
+Persistent=false
+OnBootSec=10min
+CONF
+	done
+	systemctl enable NetworkManager.service 2>/dev/null || true
+	systemctl enable swayosd-libinput-backend.service 2>/dev/null || true
+}
 
-	if [[ -f "$list" ]]; then
-		mapfile -t packages < <(sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$list" | grep -v -e '^$' -e '^#' || true)
-	fi
-
-	if ((${#packages[@]} == 0)); then
-		log "packages.txt is empty, nothing extra to install"
-		return
-	fi
-
-	log "Installing ${#packages[@]} packages from packages.txt"
-	apt-get update
-	DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
-
-	if ! mountpoint -q /var/cache/apt; then
-		apt-get clean
+freeze_kernel() {
+	mapfile -t frozen < <(dpkg-query -W -f='${Package}\n' | grep -E '^(linux-(image|dtb|u-boot)-|armbian-firmware)' || true)
+	if ((${#frozen[@]})); then
+		log "Freezing kernel and firmware: ${frozen[*]}"
+		apt-mark hold "${frozen[@]}"
 	fi
 }
 
@@ -73,23 +101,38 @@ write_version() {
 		version="$(tr -d '\r\n' <"$STAGING/version")"
 	fi
 	log "NEXUS OS version $version"
-	mkdir -p /etc/nexus
-	cat >/etc/nexus/version <<EOF
+	mkdir -p /etc/nexus /var/lib/nexus
+	cat >/etc/nexus/version <<VERSION
 NEXUS_VERSION=$version
 NEXUS_BOARD=$BOARD
 NEXUS_KERNEL_FAMILY=$LINUXFAMILY
 NEXUS_DEBIAN=$RELEASE
 NEXUS_ARCH=$ARCH
-NEXUS_DESKTOP=$BUILD_DESKTOP
-EOF
+VERSION
+}
+
+clean_up() {
+	repair_dpkg
+	if dpkg --audit | grep -q .; then
+		log "Some packages are still not fully set up:"
+		dpkg --audit
+		exit 1
+	fi
+	if ! mountpoint -q /var/cache/apt; then
+		apt-get clean
+	fi
 }
 
 main() {
-	log "Customising image for $BOARD ($RELEASE, $ARCH, desktop=$BUILD_DESKTOP)"
-	copy_overlay
+	log "Customising image for $BOARD ($RELEASE, $ARCH, armbian desktop=$BUILD_DESKTOP)"
+	prepare_apt
 	install_packages
+	copy_overlay
+	trim_services
+	freeze_kernel
 	set_hostname
 	write_version
+	clean_up
 	log "Done"
 }
 

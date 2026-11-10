@@ -8,8 +8,6 @@ on:
       - "**.md"
       - "docs/**"
       - "pico/**"
-      - "prototype/**"
-      - ".github/workflows/build-prototype.yml"
   workflow_dispatch:
 
 concurrency:
@@ -22,13 +20,17 @@ permissions:
 env:
   ARMBIAN_REF: v26.5.1
   RELEASE: trixie
-  DESKTOP_ENVIRONMENT: xfce
-  DESKTOP_TIER: minimal
 
 jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+    permissions:
+      contents: read
+
   build:
+    needs: check
     runs-on: ubuntu-24.04
-    timeout-minutes: 330
+    timeout-minutes: 345
 
     steps:
       - name: Free disk space on the runner
@@ -57,14 +59,19 @@ jobs:
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             version="$GITHUB_REF_NAME"
           else
-            version="dev-$(date -u +%Y%m%d)-${GITHUB_SHA::7}"
+            version="2.0-dev-$(date -u +%Y%m%d)-${GITHUB_SHA::7}"
           fi
           {
             echo "BOARD=$BOARD"
             echo "BRANCH=$BRANCH"
             echo "NEXUS_VERSION=$version"
           } >> "$GITHUB_ENV"
-          echo "Building NEXUS OS $version for $BOARD (kernel $BRANCH, Debian $RELEASE, $DESKTOP_ENVIRONMENT $DESKTOP_TIER)"
+          echo "Building NEXUS OS $version for $BOARD (kernel $BRANCH, Debian $RELEASE)"
+
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
 
       - name: Check out Armbian build framework
         uses: actions/checkout@v5
@@ -73,14 +80,37 @@ jobs:
           ref: ${{ env.ARMBIAN_REF }}
           path: build
 
+      - name: Drop Apple MacBook kernel patches (x86 builds only)
+        if: env.BOARD == 'uefi-x86'
+        run: |
+          # Armbian adds MacBook T2 fixes to every x86 kernel. They no longer apply to the
+          # newest 6.18 kernel and stop the build. A normal PC like the OptiPlex doesn't
+          # need them, so remove them from this build only.
+          shopt -s nullglob
+          for dir in build/patch/kernel/archive/uefi-x86-*; do
+            for patch in "$dir"/[1-4][0-9][0-9][0-9]-*.patch; do
+              echo "Removing $patch"
+              rm -f "$patch"
+            done
+            echo "Kept in $dir:"
+            ls "$dir"
+          done
+
       - name: Stage NEXUS files into the Armbian build
         run: |
-          mkdir -p build/userpatches/overlay/.nexus-build
+          staging=build/userpatches/overlay/.nexus-build
+          mkdir -p "$staging"
           cp -r userpatches/. build/userpatches/
           chmod +x build/userpatches/customize-image.sh
           cp -r overlay/. build/userpatches/overlay/
-          cp config/packages.txt build/userpatches/overlay/.nexus-build/packages.txt
-          echo "$NEXUS_VERSION" > build/userpatches/overlay/.nexus-build/version
+          cp config/packages.txt config/packages-backports.txt tools/install-packages.sh "$staging/"
+          echo "$NEXUS_VERSION" > "$staging/version"
+
+      - name: Generate wallpapers from the theme colours
+        run: |
+          for theme in build/userpatches/overlay/usr/share/nexus/themes/*/; do
+            python3 tools/make-wallpapers.py "$theme/theme.conf" "$theme/wallpapers"
+          done
 
       - name: Restore build cache
         id: cache
@@ -89,10 +119,9 @@ jobs:
           path: |
             build/cache/rootfs
             build/cache/aptcache
-          key: armbian-${{ env.ARMBIAN_REF }}-${{ env.BOARD }}-${{ env.BRANCH }}-${{ env.RELEASE }}-${{ env.DESKTOP_ENVIRONMENT }}-${{ env.DESKTOP_TIER }}-${{ hashFiles('config/packages.txt') }}
+          key: armbian-${{ env.ARMBIAN_REF }}-${{ env.BOARD }}-${{ env.BRANCH }}-${{ env.RELEASE }}-cli-${{ hashFiles('config/packages.txt', 'config/packages-backports.txt') }}
           restore-keys: |
-            armbian-${{ env.ARMBIAN_REF }}-${{ env.BOARD }}-${{ env.BRANCH }}-${{ env.RELEASE }}-${{ env.DESKTOP_ENVIRONMENT }}-${{ env.DESKTOP_TIER }}-
-            armbian-${{ env.ARMBIAN_REF }}-
+            armbian-${{ env.ARMBIAN_REF }}-${{ env.BOARD }}-${{ env.BRANCH }}-${{ env.RELEASE }}-cli-
 
       - name: Install Armbian build requirements
         working-directory: build
@@ -108,9 +137,7 @@ jobs:
             BRANCH="$BRANCH" \
             RELEASE="$RELEASE" \
             BUILD_MINIMAL=no \
-            BUILD_DESKTOP=yes \
-            DESKTOP_ENVIRONMENT="$DESKTOP_ENVIRONMENT" \
-            DESKTOP_TIER="$DESKTOP_TIER" \
+            BUILD_DESKTOP=no \
             KERNEL_CONFIGURE=no \
             COMPRESS_OUTPUTIMAGE=sha,xz \
             VENDOR="NEXUS-OS" \
@@ -129,9 +156,8 @@ jobs:
             ls -l build/output/images || true
             exit 1
           fi
-          image="${images[0]}"
           name="NEXUS-OS_${NEXUS_VERSION}_${BOARD}.img.xz"
-          sudo mv "$image" "dist/$name"
+          sudo mv "${images[0]}" "dist/$name"
           sudo chown "$USER:$USER" "dist/$name"
           (cd dist && sha256sum "$name" > "$name.sha256")
           ls -lh dist

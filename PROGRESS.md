@@ -6,7 +6,9 @@
 
 - The old version is saved on the `tactical-v1` branch.
 - `SPEC.md` rewritten for v2 with Elijah's OK. Waiting for him to review it.
-- Next: implementation plan, then v2 Phase 1 (smooth desktop on the OptiPlex). Nothing built yet.
+- Interactive look preview made on a design canvas (desktop, lock screen, deck, breadboard module).
+- Added to `SPEC.md`: swappable module slots, breadboard module (full breadboard, pin section, Pico 2 W, rails switchable 3.3V / 5V / knob), OS support for it, and a custom-made case.
+- Next: Elijah finishes adjusting the look, then implementation plan, then v2 Phase 1 (smooth desktop on the OptiPlex). Nothing built yet.
 - Everything below this section describes v1 and is kept for history.
 
 ## Prototype (all phases at once, separate from the phased build)

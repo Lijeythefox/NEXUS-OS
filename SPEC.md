@@ -224,6 +224,31 @@ Built into the image, switched on only when `BOARD` is not `uefi-x86`:
 - **Lid sleep and battery:** the v1 Pico firmware in `pico/lid-sensor/`. Lid closed = screen off and sleep (or low-power fallback). Battery level shows in the bar and warns at 15 % and 5 % through mako.
 - **Storage:** OS on eMMC, personal files and games on the micro SD at `/mnt/sdcard` (`ROMs/`, `Files/`, `Minecraft/`), set up from NEXUS menu > Setup > Prepare SD card.
 
+### Swappable modules
+
+The deck has two module slots along the hinge edge. Each slot takes a controller tray (one 8BitDo Zero 2, wireless, no connection needed). Both slots together take the **breadboard module**. Modules are held in by magnets and connect through a 4-pin magnetic pogo connector (5V, GND, USB data) to the deck's USB hub.
+
+Breadboard module hardware (designed separately, custom PCB):
+
+- Full 830-hole breadboard.
+- Pin section next to it: every Pico pin (26 GPIO, 3V3, 5V, ADJ, GND, RUN) has its own labelled strip of 4 connected holes (precision female headers).
+- Raspberry Pi Pico 2 W soldered flat on the PCB. Its USB comes from the test pads under the board and goes to the pogo connector, so the deck sees a normal Pico.
+- Breadboard minus strips are always GND. Each plus strip (top and bottom) has a 3-way switch: 3.3V, 5V or ADJ. ADJ is one knob-set buck-boost output, about 1.2 to 5.5V.
+- Separate helper chip with an electronic fuse, rail on/off and a voltage/current sensor per rail. It keeps working while the Pico is reflashed or crashed, and reports to the deck over USB.
+- BOOT and RESET buttons on the module edge.
+
+What NEXUS OS does with it:
+
+- **Connect pop-up:** when the module snaps in, a notification "Breadboard module connected" with buttons for Thonny, a terminal running `mpremote`, and Flash `.uf2` (picks a file and copies it to the Pico in BOOT mode).
+- **Bar chip:** a `BB` chip in the top bar shows each rail's voltage (e.g. `5V · 1.8V`). Clicking it opens a small panel with voltage and current per rail, a rails on/off switch and the Pico tools.
+- **Over-current:** if the fuse trips, a red notification names the rail. Rails are switched back on from the bar chip or the module.
+- **Slot status:** the NEXUS menu (Setup > Modules) shows what is in each slot.
+- Built as `nexus-modules` (one small service started on USB plug-in by a udev rule, not running all the time) plus a Waybar custom module.
+
+### Case
+
+The case is designed and 3D-printed from scratch (no bought case), sized around the screen, keyboard, trackball, battery and the double module slot.
+
 ## Changes from v1
 
 | v1 | v2 |

@@ -2,7 +2,12 @@
 
 ## Current phase
 
-**Phase 1: Repo skeleton and bare image.** Waiting for the first GitHub build and a device test.
+**NEXUS OS 2 redesign (10 Nov 2026).** Elijah asked to rebuild NEXUS OS as a smooth, minimal Omarchy-style desktop (Hyprland, calm themes) filled with his own tools, replacing the tactical XFCE version.
+
+- The old version is saved on the `tactical-v1` branch.
+- `SPEC.md` rewritten for v2 with Elijah's OK. Waiting for him to review it.
+- Next: implementation plan, then v2 Phase 1 (smooth desktop on the OptiPlex). Nothing built yet.
+- Everything below this section describes v1 and is kept for history.
 
 ## Prototype (all phases at once, separate from the phased build)
 

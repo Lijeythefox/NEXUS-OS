@@ -231,16 +231,16 @@ The deck has two module slots along the hinge edge. Each slot takes a controller
 Breadboard module hardware (designed separately, custom PCB):
 
 - Full 830-hole breadboard.
-- Pin section next to it: every Pico pin (26 GPIO, 3V3, 5V, ADJ, GND, RUN) has its own labelled strip of 4 connected holes (precision female headers).
+- Pin section next to it: every Pico pin (26 GPIO, 3V3, 5V, ADJ A, ADJ B, GND, RUN) has its own labelled strip of 4 connected holes (precision female headers).
 - Raspberry Pi Pico 2 W soldered flat on the PCB. Its USB comes from the test pads under the board and goes to the pogo connector, so the deck sees a normal Pico.
-- Breadboard minus strips are always GND. Each plus strip (top and bottom) has a 3-way switch: 3.3V, 5V or ADJ. ADJ is one knob-set buck-boost output, about 1.2 to 5.5V.
+- Breadboard minus strips are always GND. Each plus strip (top rail and bottom rail) has its own 3-way switch, **3.3V / ADJ / 5V**, and its own knob. In the ADJ position that rail follows its own knob (separate buck-boost converter per rail, about 1.2 to 5.5V), so the two rails can be two different custom voltages at once.
 - Separate helper chip with an electronic fuse, rail on/off and a voltage/current sensor per rail. It keeps working while the Pico is reflashed or crashed, and reports to the deck over USB.
 - BOOT and RESET buttons on the module edge.
 
 What NEXUS OS does with it:
 
 - **Connect pop-up:** when the module snaps in, a notification "Breadboard module connected" with buttons for Thonny, a terminal running `mpremote`, and Flash `.uf2` (picks a file and copies it to the Pico in BOOT mode).
-- **Bar chip:** a `BB` chip in the top bar shows each rail's voltage (e.g. `5V · 1.8V`). Clicking it opens a small panel with voltage and current per rail, a rails on/off switch and the Pico tools.
+- **Bar chip:** a `BB` chip in the top bar shows each rail's voltage (e.g. `5V · 1.8V`, top rail first). Clicking it opens a small panel with voltage and current per rail, a rails on/off switch and the Pico tools.
 - **Over-current:** if the fuse trips, a red notification names the rail. Rails are switched back on from the bar chip or the module.
 - **Slot status:** the NEXUS menu (Setup > Modules) shows what is in each slot.
 - Built as `nexus-modules` (one small service started on USB plug-in by a udev rule, not running all the time) plus a Waybar custom module.

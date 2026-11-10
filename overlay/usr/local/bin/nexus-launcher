@@ -1,0 +1,4 @@
+#!/bin/bash
+# App launcher. Pressing the shortcut again closes it.
+if pidof fuzzel >/dev/null; then pkill -x fuzzel; exit 0; fi
+exec fuzzel --config "$HOME/.config/nexus/current/fuzzel.ini"

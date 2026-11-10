@@ -1,0 +1,27 @@
+#!/bin/bash
+# Decides who gets logged in on the first screen (tty1):
+#   - while Armbian's first-run setup is pending: root (the setup needs it)
+#   - after that: the desktop user, without asking for a password
+#     (the lock screen asks for it instead)
+#   - if /etc/nexus/no-autologin exists: a normal login prompt
+term="${1:-linux}"
+agetty="${AGETTY:-/sbin/agetty}"
+marker="${NEXUS_FIRSTLOGIN_MARKER:-/root/.not_logged_in_yet}"
+user_file="${NEXUS_AUTOLOGIN_FILE:-/etc/nexus/autologin-user}"
+off_file="${NEXUS_NO_AUTOLOGIN_FILE:-/etc/nexus/no-autologin}"
+
+if [[ -e "$marker" ]]; then
+	exec "$agetty" --noissue --autologin root --noclear - "$term"
+fi
+
+user=""
+if [[ -r "$user_file" ]]; then
+	user="$(tr -d '[:space:]' <"$user_file")"
+else
+	user="$(getent passwd 1000 | cut -d: -f1)"
+fi
+
+if [[ -n "$user" && "$user" != root && ! -e "$off_file" ]]; then
+	exec "$agetty" --noclear --autologin "$user" - "$term"
+fi
+exec "$agetty" --noclear - "$term"

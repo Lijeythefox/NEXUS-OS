@@ -1,0 +1,25 @@
+#!/bin/bash
+# Volume and brightness with an on-screen pop-up.
+#   nexus-osd volume up|down|mute     nexus-osd mic mute
+#   nexus-osd brightness up|down      nexus-osd start|restart
+style="$HOME/.config/nexus/current/swayosd.css"
+case "${1:-} ${2:-}" in
+"start "*)
+	pidof swayosd-server >/dev/null && exit 0
+	exec swayosd-server -s "$style"
+	;;
+"restart "*)
+	pkill -x swayosd-server 2>/dev/null && sleep 0.2
+	exec swayosd-server -s "$style"
+	;;
+"volume up") swayosd-client --output-volume raise 2>/dev/null || wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+ ;;
+"volume down") swayosd-client --output-volume lower 2>/dev/null || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- ;;
+"volume mute") swayosd-client --output-volume mute-toggle 2>/dev/null || wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
+"mic mute") swayosd-client --input-volume mute-toggle 2>/dev/null || wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
+"brightness up") swayosd-client --brightness raise 2>/dev/null || brightnessctl set 5%+ ;;
+"brightness down") swayosd-client --brightness lower 2>/dev/null || brightnessctl set 5%- ;;
+*)
+	echo "usage: nexus-osd volume up|down|mute | mic mute | brightness up|down | start | restart" >&2
+	exit 2
+	;;
+esac

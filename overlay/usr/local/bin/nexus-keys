@@ -1,0 +1,4 @@
+#!/bin/bash
+# Shows the list of keyboard shortcuts.
+if pidof fuzzel >/dev/null; then pkill -x fuzzel; exit 0; fi
+nexus-pick "Shortcuts" --lines 16 --width 64 </usr/share/nexus/default/keys.txt >/dev/null

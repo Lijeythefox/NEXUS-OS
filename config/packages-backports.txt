@@ -1,0 +1,6 @@
+# Packages from Debian backports. ONLY the Hyprland family goes here.
+hyprland
+hyprlock
+hypridle
+hyprpolkitagent
+xdg-desktop-portal-hyprland

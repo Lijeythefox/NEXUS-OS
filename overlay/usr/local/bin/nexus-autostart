@@ -1,0 +1,22 @@
+#!/bin/bash
+# Everything that starts with the desktop. Hyprland runs this once at start-up.
+cur="$HOME/.config/nexus/current"
+
+# Tell the rest of the system (portals, apps started by systemd) about this desktop.
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP \
+	HYPRLAND_INSTANCE_SIGNATURE XCURSOR_THEME XCURSOR_SIZE GTK_THEME QT_QPA_PLATFORM >/dev/null 2>&1
+
+# Lock first, so nothing is usable before the password is typed.
+if [[ "${NEXUS_NO_LOCK:-}" != 1 && ! -e "$HOME/.config/nexus/no-lock-on-login" ]]; then
+	nexus-lock &
+fi
+
+nexus-wallpaper apply &
+nexus-bar &
+mako -c "$cur/mako" &
+nexus-osd start &
+hypridle -c /usr/share/nexus/default/hypr/hypridle.conf &
+systemctl --user start hyprpolkitagent.service >/dev/null 2>&1 &
+command -v xdg-user-dirs-update >/dev/null && xdg-user-dirs-update &
+wait -n 2>/dev/null
+exit 0

@@ -1,0 +1,52 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 38,
+  "spacing": 0,
+  "modules-left": ["custom/nexus", "hyprland/workspaces"],
+  "modules-center": ["clock"],
+  "modules-right": ["bluetooth", "network", "wireplumber", "custom/power"],
+  "custom/nexus": {
+    "format": "◆",
+    "tooltip": false,
+    "on-click": "nexus-menu"
+  },
+  "hyprland/workspaces": {
+    "format": " ",
+    "persistent-workspaces": { "*": 5 },
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  },
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+  "bluetooth": {
+    "format": "",
+    "format-no-controller": "",
+    "tooltip-format": "Bluetooth: {status}",
+    "on-click": "nexus-menu"
+  },
+  "network": {
+    "format-wifi": "",
+    "format-ethernet": "",
+    "format-linked": "",
+    "format-disconnected": "",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)  {ipaddr}",
+    "tooltip-format-ethernet": "Wired  {ipaddr}",
+    "tooltip-format-disconnected": "No network",
+    "on-click": "nexus-menu"
+  },
+  "wireplumber": {
+    "format": "{icon}",
+    "format-muted": "",
+    "format-icons": ["", ""],
+    "tooltip-format": "Volume {volume}%",
+    "on-click": "nexus-osd volume mute"
+  },
+  "custom/power": {
+    "format": "",
+    "tooltip": false,
+    "on-click": "nexus-power"
+  }
+}

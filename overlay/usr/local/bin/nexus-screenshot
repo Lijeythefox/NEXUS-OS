@@ -1,0 +1,16 @@
+#!/bin/bash
+# Screenshot.  nexus-screenshot full   the whole screen
+#              nexus-screenshot area   drag out an area
+# The picture is saved in ~/Pictures/Screenshots and copied to the clipboard.
+dir="$HOME/Pictures/Screenshots"
+mkdir -p "$dir"
+file="$dir/Screenshot_$(date +%Y-%m-%d_%H-%M-%S).png"
+
+if [[ "${1:-full}" == area ]]; then
+	region="$(slurp)" || exit 0
+	grim -g "$region" "$file" || exit 1
+else
+	grim "$file" || exit 1
+fi
+wl-copy --type image/png <"$file" 2>/dev/null
+notify-send "Screenshot saved" "$file"

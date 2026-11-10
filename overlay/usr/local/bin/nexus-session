@@ -1,0 +1,48 @@
+#!/bin/bash
+# Starts the NEXUS desktop (Hyprland) and waits for it to close.
+#   exit 0  the desktop ran normally and was closed
+#   exit 1  the desktop stopped almost at once (a failed start)
+#   exit 3  it failed 3 times in a row: stop trying and leave a shell
+limit="${NEXUS_FAST_FAIL_SECS:-10}"
+cache="$HOME/.cache/nexus"
+log="$cache/hyprland.log"
+fails_file="$cache/session-fails"
+mkdir -p "$cache"
+
+nexus-theme ensure || echo "nexus-session: could not prepare the theme files" >&2
+
+[[ -f "$log" ]] && mv -f "$log" "$log.old"
+started="$(date +%s)"
+if command -v start-hyprland >/dev/null 2>&1; then
+	start-hyprland >"$log" 2>&1
+elif command -v Hyprland >/dev/null 2>&1; then
+	Hyprland >"$log" 2>&1
+else
+	echo "Hyprland is not installed (no start-hyprland or Hyprland command found)." >"$log"
+fi
+ran=$(($(date +%s) - started))
+
+if ((ran >= limit)); then
+	echo 0 >"$fails_file"
+	exit 0
+fi
+
+fails=0
+[[ -r "$fails_file" ]] && fails="$(tr -cd '0-9' <"$fails_file")"
+fails=$((${fails:-0} + 1))
+echo "$fails" >"$fails_file"
+
+if ((fails >= 3)); then
+	echo 0 >"$fails_file"
+	cat <<MSG
+
+  The NEXUS desktop failed to start 3 times in a row, so it has stopped trying.
+
+  What went wrong is written in:  $log
+  Show the last lines with:       tail -n 30 $log
+  Try the desktop again with:     nexus-session
+
+MSG
+	exit 3
+fi
+exit 1

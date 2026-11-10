@@ -1,0 +1,24 @@
+#!/bin/bash
+# Opens an app by what it is for. Says so if the app is not installed yet.
+#   nexus-open browser | files | code | games | keyboard
+first_of() {
+	local c
+	for c in "$@"; do
+		if command -v "$c" >/dev/null 2>&1; then echo "$c"; return 0; fi
+	done
+	return 1
+}
+later() { notify-send "$1" "$2"; exit 0; }
+
+case "${1:-}" in
+browser) app="$(first_of chromium firefox-esr firefox)" || later "No browser yet" "Chromium is added in build phase 4." ;;
+files) app="$(first_of thunar)" || later "No file manager" "Thunar is missing." ;;
+code) app="$(first_of code codium)" || later "No code editor yet" "VS Code is added in build phase 4." ;;
+games) app="$(first_of es-de emulationstation)" || later "No game launcher yet" "ES-DE is added in build phase 4." ;;
+keyboard) later "On-screen keyboard" "The on-screen keyboard is added with the deck features (build phase 5)." ;;
+*)
+	echo "usage: nexus-open browser|files|code|games|keyboard" >&2
+	exit 2
+	;;
+esac
+exec "$app"

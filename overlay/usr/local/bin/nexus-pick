@@ -1,0 +1,4 @@
+#!/bin/bash
+# Shows a list (one choice per line on standard input) and prints the one picked.
+# Usage: printf 'One\nTwo\n' | nexus-pick "Title"
+exec fuzzel --dmenu --config "$HOME/.config/nexus/current/fuzzel.ini" --prompt "${1:-}  " "${@:2}"

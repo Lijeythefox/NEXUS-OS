@@ -1,0 +1,15 @@
+#!/bin/bash
+# Top bar.  nexus-bar            start (or restart) the bar
+#           nexus-bar restart    same
+#           nexus-bar toggle     hide or show it
+config="$HOME/.config/waybar/config.json"
+[[ -f "$config" ]] || config=/usr/share/nexus/default/waybar/config.json
+style="$HOME/.config/nexus/current/waybar.css"
+
+case "${1:-start}" in
+toggle)
+	if pidof waybar >/dev/null; then pkill -x waybar; exit 0; fi
+	;;
+esac
+pkill -x waybar 2>/dev/null && sleep 0.2
+exec waybar -c "$config" -s "$style"

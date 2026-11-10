@@ -1,0 +1,21 @@
+#!/bin/bash
+# Prints how fast this machine booted and how much memory the desktop uses.
+# Run it in a terminal about a minute after logging in, then send Claude the output.
+if [[ -r /etc/nexus/version ]]; then
+	# shellcheck disable=SC1091
+	. /etc/nexus/version
+	echo "NEXUS OS ${NEXUS_VERSION:-?} on ${NEXUS_BOARD:-?}"
+fi
+echo
+echo "== Boot time =="
+systemd-analyze 2>/dev/null || echo "(not available)"
+echo
+echo "== Memory =="
+free -m | awk '/^Mem:/ {printf "In use: %d MB of %d MB (available: %d MB)\n", $3, $2, $7}'
+echo
+echo "== Five slowest services at boot =="
+systemd-analyze blame 2>/dev/null | head -n 5
+echo
+echo "== Desktop =="
+command -v hyprctl >/dev/null && hyprctl version 2>/dev/null | head -n 1
+echo "Kernel: $(uname -r)"

@@ -1,0 +1,54 @@
+# Packages from Debian stable, one per line. Lines starting with # are notes.
+# Only what the list says is installed (apt's "recommended" extras are off),
+# which keeps the system small.
+
+# Desktop pieces
+waybar
+fuzzel
+mako-notifier
+swayosd
+swaybg
+foot
+thunar
+gvfs
+xwayland
+grim
+slurp
+wl-clipboard
+brightnessctl
+playerctl
+libnotify-bin
+xdg-user-dirs
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+
+# Sound
+pipewire
+pipewire-audio
+pipewire-pulse
+wireplumber
+rtkit
+
+# Graphics drivers
+libgl1-mesa-dri
+libegl1
+libgles2
+mesa-vulkan-drivers
+
+# Look
+fonts-jetbrains-mono
+fonts-font-awesome
+fonts-noto-core
+fonts-noto-color-emoji
+adwaita-icon-theme
+librsvg2-common
+gsettings-desktop-schemas
+dconf-gsettings-backend
+
+# System
+dbus-user-session
+polkitd
+pkexec
+network-manager
+wpasupplicant
+python3

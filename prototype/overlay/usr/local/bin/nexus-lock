@@ -1,2 +1,0 @@
-#!/bin/bash
-light-locker-command -l 2>/dev/null || xflock4

@@ -1,0 +1,17 @@
+#!/bin/bash
+# The NEXUS menu. More sections (Style, Setup, Install, Update, Tools) arrive in phase 2.
+if pidof fuzzel >/dev/null; then pkill -x fuzzel; exit 0; fi
+
+if [[ "${1:-}" == theme ]]; then
+	notify-send "Themes" "Tokyo Night is the only theme so far. The other five arrive in build phase 3."
+	exit 0
+fi
+
+choice="$(printf '%s\n' "Apps" "Shortcuts" "Next wallpaper" "Screenshot" "Power" | nexus-pick "NEXUS" --lines 5)"
+case "$choice" in
+"Apps") exec nexus-launcher ;;
+"Shortcuts") exec nexus-keys ;;
+"Next wallpaper") exec nexus-wallpaper next ;;
+"Screenshot") sleep 0.4; exec nexus-screenshot full ;;
+"Power") exec nexus-power ;;
+esac

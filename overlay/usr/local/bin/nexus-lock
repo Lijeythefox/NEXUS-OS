@@ -1,0 +1,4 @@
+#!/bin/bash
+# Lock the screen (does nothing if it is already locked).
+pidof hyprlock >/dev/null && exit 0
+exec hyprlock -c "$HOME/.config/nexus/current/hyprlock.conf"

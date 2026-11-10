@@ -1,0 +1,26 @@
+#!/bin/bash
+# Wallpaper.  nexus-wallpaper apply   show the current wallpaper (run at start-up)
+#             nexus-wallpaper next    switch to the theme's next wallpaper
+cfg="$HOME/.config/nexus"
+theme="$(nexus-theme current 2>/dev/null || echo tokyo-night)"
+mapfile -t files < <(find "/usr/share/nexus/themes/$theme/wallpapers" -maxdepth 1 -type f \( -name '*.png' -o -name '*.jpg' \) 2>/dev/null | sort)
+((${#files[@]})) || exit 0
+mkdir -p "$cfg"
+
+index=0
+[[ -r "$cfg/wallpaper-index" ]] && index="$(tr -cd '0-9' <"$cfg/wallpaper-index")"
+index="${index:-0}"
+[[ "${1:-apply}" == next ]] && index=$((index + 1))
+index=$((index % ${#files[@]}))
+echo "$index" >"$cfg/wallpaper-index"
+ln -sfn "${files[$index]}" "$cfg/wallpaper"
+
+old="$(pidof swaybg || true)"
+swaybg -m fill -i "$cfg/wallpaper" >/dev/null 2>&1 &
+disown
+if [[ -n "$old" ]]; then
+	sleep 0.6
+	# shellcheck disable=SC2086
+	kill $old 2>/dev/null
+fi
+exit 0

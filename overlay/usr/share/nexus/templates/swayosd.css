@@ -1,0 +1,28 @@
+/* Volume and brightness pop-up. Filled in by nexus-theme; do not edit. */
+window#osd {
+    border-radius: 999px;
+    border: none;
+    background: alpha({{surface}}, 0.92);
+    padding: 12px 20px;
+}
+#container { margin: 16px; }
+image, label { color: {{fg}}; }
+progressbar:disabled, image:disabled { opacity: 0.5; }
+progressbar {
+    min-height: 6px;
+    border-radius: 999px;
+    background: transparent;
+    border: none;
+}
+trough {
+    min-height: inherit;
+    border-radius: inherit;
+    border: none;
+    background: {{raised}};
+}
+progress {
+    min-height: inherit;
+    border-radius: inherit;
+    border: none;
+    background: {{accent}};
+}

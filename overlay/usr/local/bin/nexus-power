@@ -1,0 +1,11 @@
+#!/bin/bash
+# Power menu: lock, sleep, restart, shut down or log out.
+if pidof fuzzel >/dev/null; then pkill -x fuzzel; exit 0; fi
+choice="$(printf '%s\n' "Lock" "Sleep" "Restart" "Shut down" "Log out" | nexus-pick "Power" --lines 5)"
+case "$choice" in
+"Lock") exec nexus-lock ;;
+"Sleep") nexus-lock & sleep 1; exec systemctl suspend ;;
+"Restart") exec systemctl reboot ;;
+"Shut down") exec systemctl poweroff ;;
+"Log out") exec hyprctl dispatch 'hl.dsp.exit()' ;;
+esac

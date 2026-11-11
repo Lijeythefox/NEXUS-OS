@@ -50,6 +50,14 @@ else
 	result "VERIFY=FAILED (exit $verify_rc)"
 	exit 1
 fi
+# Prove the check can fail: a config with a made-up setting must NOT pass.
+printf 'hl.config({ general = { this_setting_does_not_exist = 1 } })\n' >/tmp/bad-config.lua
+chmod 0644 /tmp/bad-config.lua
+if su tester -c 'XDG_RUNTIME_DIR=/tmp/xdg-tester /tmp/Hyprland-check --verify-config -c /tmp/bad-config.lua' 2>&1 | tee "$OUT/verify-selftest.log" | grep -q 'config ok'; then
+	result "VERIFY_SELFTEST=FAILED (a broken config passed the check)"
+	exit 1
+fi
+result "VERIFY_SELFTEST=ok"
 echo "::endgroup::"
 
 echo "::group::Check the launcher and terminal configs"
@@ -61,7 +69,7 @@ if ! su tester -c "fuzzel --check-config --config $cur/fuzzel.ini" >"$OUT/fuzzel
 cat "$OUT/fuzzel.log"
 jq empty /usr/share/nexus/default/waybar/config.json || other=FAILED
 for command in waybar mako swayosd-server swayosd-client swaybg hyprlock hypridle grim slurp wl-copy notify-send \
-	brightnessctl playerctl thunar start-hyprland hyprctl Xwayland wpctl nmcli; do
+	brightnessctl playerctl thunar start-hyprland hyprctl Xwayland wpctl nmcli jq pkill; do
 	command -v "$command" >/dev/null || { echo "missing command: $command"; other=FAILED; }
 done
 result "OTHER_CONFIGS=$other"

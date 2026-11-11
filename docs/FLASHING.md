@@ -1,4 +1,6 @@
-# Installing NEXUS OS
+# Installing NEXUS OS on the cyberdeck
+
+> **Not ready yet.** NEXUS OS 2 currently builds for the OptiPlex only (see `docs/INSTALL-OPTIPLEX.md`). The deck build is phase 5, after a board is chosen. The steps below are the general shape for an ARM board and will be updated then.
 
 Start to finish: send the recipe to GitHub, let GitHub build the image, put it on a micro SD card, boot the deck from it, then copy it onto the deck's built-in storage (eMMC).
 
@@ -20,17 +22,15 @@ You need:
 ## 2. Wait for the build
 
 1. Open <https://github.com/Lijeythefox/NEXUS-OS/actions>.
-2. There are two builds:
-   - **Build NEXUS OS image**: the main, phase-by-phase build. Right now it's the bare Phase 1 desktop.
-   - **Build NEXUS OS prototype**: the everything-at-once prototype (all apps, themes, Settings app). Less tested.
-3. A yellow dot means it's still running. The main build takes about 1 to 2 hours, the prototype 2 to 4 hours.
+2. Click **Build NEXUS OS image**.
+3. A yellow dot means it's still running. A build takes about 2 hours.
 4. When it shows a **green tick**, it's ready. A **red cross** means it failed: open the run, download the **build-logs** artifact at the bottom, and send it to Claude.
 
 ## 3. Download the image
 
 1. Click the run with the green tick.
 2. Scroll to **Artifacts** at the bottom of the page.
-3. Click the one starting with `NEXUS-OS_` (main) or `NEXUS-OS-prototype_` (prototype). It downloads as a `.zip` (about 1 to 3 GB).
+3. Click the one starting with `NEXUS-OS_`. It downloads as a `.zip`.
 4. Unzip it. Inside is a file ending in `.img.xz`. Don't unpack the `.img.xz` itself; Etcher reads it as is.
 
 Tagged versions of the main build (for example `v0.1`) are also on the **Releases** page.
@@ -53,9 +53,9 @@ Tagged versions of the main build (for example `v0.1`) are also on the **Release
 4. Armbian's setup screen appears (NEXUS OS is built on Armbian, so some setup screens say "Armbian"). It asks you to:
    - set a **root password** (the admin password, keep it safe),
    - pick your shell (choose **bash**),
-   - create your **user account** (name and password; this is what you log in with),
+   - create your **user account** (name and password; this is what unlocks the desktop),
    - confirm language and time zone.
-5. The desktop starts.
+5. The lock screen appears. Type your user password.
 
 For testing new builds you can keep running from the SD card and skip step 6.
 
@@ -63,7 +63,7 @@ For testing new builds you can keep running from the SD card and skip step 6.
 
 Do this once you're happy with a build. It replaces whatever is on the eMMC.
 
-1. Open a terminal: start menu > **Terminal** (or Super + T on the prototype).
+1. Open a terminal: **Super + Return**.
 2. Type `sudo armbian-install`, press Enter, and type your password.
 3. Choose **Boot from eMMC - system on eMMC**.
 4. Confirm. It erases the eMMC and copies the system across (around 5 to 10 minutes).
@@ -72,22 +72,9 @@ Do this once you're happy with a build. It replaces whatever is on the eMMC.
 
 If `armbian-install` isn't found, run `sudo armbian-config` and look under **System** for the install option.
 
-## 7. Set up your personal micro SD card (prototype)
+## 7. Set up your personal micro SD card
 
-Games, documents, Minecraft worlds and snapshots live on the micro SD card, so reflashing never touches them.
-
-1. Put your personal micro SD card in the deck.
-2. Open **Settings > System > Storage**.
-3. Click **Prepare card**, type `ERASE` and enter your password. This formats the card the Linux way and creates the `ROMs`, `Files`, `Minecraft` and `Snapshots` folders.
-4. Log out and back in so Documents, Downloads, Pictures and so on point at the card.
-
-Then, in **Settings**:
-
-- **Network & internet > Wi-Fi**: connect to Wi-Fi.
-- **Bluetooth & devices > Bluetooth**: pair the controller and keyboard.
-- **Accounts > Callsign**: set your callsign.
-- **Privacy & security > File sharing > Share password**: lets you copy games in from Windows at `\\nexus.local\ROMs`.
-- **Network & internet > VPN**: sign in to Tailscale.
+Comes with the deck features in phase 5 (NEXUS menu > Setup > Prepare SD card).
 
 ## Updating to a newer build later
 

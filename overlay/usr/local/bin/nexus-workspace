@@ -1,0 +1,9 @@
+#!/bin/bash
+# Switches workspace.  nexus-workspace 3 | next | prev
+case "${1:-}" in
+next) target='"e+1"' ;;
+prev) target='"e-1"' ;;
+[1-9]) target="$1" ;;
+*) echo "usage: nexus-workspace 1..9|next|prev" >&2; exit 2 ;;
+esac
+exec hyprctl dispatch "hl.dsp.focus({ workspace = $target })"

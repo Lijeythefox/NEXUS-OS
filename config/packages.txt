@@ -50,5 +50,7 @@ dbus-user-session
 polkitd
 pkexec
 network-manager
+jq
+procps
 wpasupplicant
 python3

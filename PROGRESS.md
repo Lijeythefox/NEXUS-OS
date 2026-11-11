@@ -1,120 +1,67 @@
-# NEXUS OS progress
+# NEXUS OS Progress
 
 ## Current phase
 
-**NEXUS OS 2 redesign (10 Nov 2026).** Elijah asked to rebuild NEXUS OS as a smooth, minimal Omarchy-style desktop (Hyprland, calm themes) filled with his own tools, replacing the tactical XFCE version.
+**NEXUS OS 2, Phase 1: smooth desktop on the OptiPlex.** Built and pushed. Waiting for the GitHub image build and Elijah's first test on the OptiPlex 3060.
 
-- The old version is saved on the `tactical-v1` branch.
-- `SPEC.md` rewritten for v2 with Elijah's OK. Waiting for him to review it.
-- Interactive look preview made on a design canvas (desktop, lock screen, deck, breadboard module).
-- Added to `SPEC.md`: swappable module slots, breadboard module (full breadboard, pin section, Pico 2 W, rails switchable 3.3V / 5V / knob), OS support for it, and a custom-made case.
-- Next: Elijah finishes adjusting the look, then implementation plan, then v2 Phase 1 (smooth desktop on the OptiPlex). Nothing built yet.
-- Everything below this section describes v1 and is kept for history.
+The old tactical version (XFCE, HUD, Settings app) and its progress notes are on the `tactical-v1` branch.
 
-## Prototype (all phases at once, separate from the phased build)
+## What phase 1 contains
 
-Elijah asked for the whole OS as a prototype in `prototype/`, plus a check that it has every everyday app Windows has. Details, the Windows app table and every difference from `SPEC.md` are in `prototype/README.md`.
+- **Base:** Armbian `v26.5.1` CLI image (no Armbian desktop), Debian 13 trixie, `BOARD=uefi-x86`.
+- **Desktop:** Hyprland 0.55.2 from Debian backports, with a Lua config. Tiling, gaps, rounded corners, blur, shadows, Omarchy-style animations (windows pop in, workspaces slide, menus fade).
+- **Top bar (Waybar):** NEXUS logo (opens the menu), five clickable workspace dots, clock, Bluetooth, network, volume, power.
+- **Launcher and menus (fuzzel):** Super + Space for apps. Super + Alt + Space for a small NEXUS menu (Apps, Shortcuts, Next wallpaper, Screenshot, Power). The full menu is phase 2.
+- **Also:** notifications (mako), volume/brightness pop-up (SwayOSD), terminal (foot), files (Thunar), lock screen (hyprlock), idle dim/lock/screen-off (hypridle), screenshots, three generated wallpapers.
+- **Theme:** Tokyo Night. Every colour comes from `overlay/usr/share/nexus/themes/tokyo-night/theme.conf` through templates in `overlay/usr/share/nexus/templates/`.
+- **All shortcuts from `SPEC.md`.** Ones for apps that arrive later (browser, VS Code, games, on-screen keyboard) show a short "arrives in phase N" notification.
+- **Start-up:** after Armbian's first-run setup, the desktop user is logged in automatically on the first screen and the desktop starts locked. If the desktop fails to start 3 times in a row it stops trying and leaves a text prompt with the log location, so the machine can't get stuck in a loop.
+- **Speed work:** no login manager, apt "recommended" extras off, printing/Avahi/ModemManager/SSH server off, automatic updates held back for the first 10 minutes after boot. `nexus-bench` prints boot time and memory use.
 
-- Built by its own workflow, `.github/workflows/build-prototype.yml` ("Build NEXUS OS prototype"). It runs only when `prototype/` changes. The main build ignores `prototype/`.
-- A quick check job runs first (about 5 minutes). It catches typos in Python, shell, Lua and XML, and test-generates all themes before the long build starts.
-- Image name: `NEXUS-OS-prototype_<version>_radxa-zero3.img.xz` (Actions artifact only, no release).
-- Status: written, not yet built successfully. **Everything in it needs device test.**
-- Build #2 failed (2026-10-02): Chromium asked an interactive question during install (Armbian already ships `/etc/chromium/master_preferences`). Nobody could answer it, so Chromium was left half-installed and every later install failed, including Armbian's own `armbian-config` step. Fix: `customize-image.sh` now tells apt to always keep existing config files, repairs half-installed packages after any failure, and stops with a clear message if anything is still broken.
-- Phase 1 main build #1 succeeded (2026-10-02).
-- Approved for the main build: the built-in controller helper, PPSSPP/Flycast as RetroArch cores, nightly libretro cores, and the extra packages. The other differences in `prototype/README.md` (Timeshift folder, weather source, Hotspot tile, menu sound, window corners) are still open.
-- `SPEC.md` updated (with Elijah's OK): flashing now goes through a spare SD card, and the Pico also reads the battery voltage.
+## Checked on GitHub (not on hardware)
 
-## Decisions made
+The **Check NEXUS OS** workflow runs on every push (about 3 minutes):
 
-| Topic | Decision |
-| --- | --- |
-| Base | Armbian build framework pinned to `v26.5.1`, Debian 13 "trixie" (current stable) |
-| Kernel | Mainline (`BRANCH=current` in `config/board.conf`) |
-| Desktop | XFCE, Armbian's `minimal` desktop tier (apps are added by us in Phase 2) |
-| Flashing | Etcher to a spare micro SD, boot it, copy to eMMC with `armbian-install` (see `docs/FLASHING.md`) |
-| First boot | Keep Armbian's setup wizard for now (root password, user, locale) |
-| Battery level | The Pico will read battery voltage as well as the lid sensor (Phase 6) |
-| Repo | Public, so GitHub Actions minutes are free |
-| Branding | Armbian `VENDOR` is set to `NEXUS-OS`; hostname is `nexus` |
-| Controller mouse mode | Built-in helper `nexus-pad` instead of AntiMicroX (no ARM build). Approved 2026-10-02 |
-| PSP and Dreamcast | PPSSPP and Flycast as RetroArch cores (standalone apps not in Debian 13 for ARM). Approved 2026-10-02 |
-| Emulator cores | libretro nightly builds for ARM (no stable ARM builds exist). Approved 2026-10-02 |
-| Extra packages | The extra packages listed in `prototype/README.md` (Samba, ufw, light-locker, etc.). Approved 2026-10-02 |
-
-## What changed
-
-- `config/board.conf`: board (`radxa-zero3`) and kernel branch (`current`).
-- `config/packages.txt`: empty for now; the build already reads it.
-- `userpatches/customize-image.sh`: runs inside the image during the build. Copies `overlay/`, installs `packages.txt`, sets hostname `nexus`, writes `/etc/nexus/version`.
-- `overlay/etc/nexus/.keep`: placeholder so the overlay folder exists.
-- `.github/workflows/build.yml`: builds the image on every push to `main` (or the manual **Run workflow** button). Frees runner disk space, caches Armbian's rootfs and apt downloads, uploads `NEXUS-OS_<version>_radxa-zero3.img.xz` under Actions. Pushing a tag like `v0.1` also publishes it under Releases.
-- `.gitattributes`: forces Linux line endings so scripts written on Windows don't break the build.
-- `.gitignore`: ignores build output and Windows clutter.
-- `docs/FLASHING.md`: full install guide: push in GitHub Desktop, wait for the build, download, flash to SD, first boot, copy to eMMC, set up the personal micro SD card.
-
-## Still to do in Phase 1
-
-- First GitHub build must go green.
-- Elijah flashes it and confirms it boots to the XFCE desktop.
-
-## Known issues and risks
-
-- Armbian clones its desktop definitions (`armbian/configng`) from its `main` branch during the build, so that part isn't pinned. If a build suddenly breaks without us changing anything, this is a likely cause.
-- Wi-Fi/Bluetooth chip (AIC8800) on the mainline kernel comes from an Armbian extension. Might be less solid than on the vendor kernel.
-- The board might prefer a bootloader already on the eMMC over the SD card.
+- All 47 packages install in a clean Debian 13 (42 from stable, 5 from backports). The reported `libxkbcommon` clash did not happen.
+- `Hyprland --verify-config` on the NEXUS config: `config ok` (real Hyprland 0.55.2). A deliberately broken config is rejected, so the check can fail.
+- foot and fuzzel accept their generated configs. Every command the desktop calls exists.
+- 18 unit tests: theme rendering (missing colours and bad colours are refused), session start and the 3-failures guard, auto-login rules, workspace dot states.
 
 ## Needs device test
 
-- [ ] Boots from SD card to the Armbian setup wizard, then to the XFCE desktop
-- [ ] Screen shows 1024x600 correctly
-- [ ] Touchscreen moves the pointer / taps
-- [ ] Keyboard and trackpad work
-- [ ] Wi-Fi connects
-- [ ] Bluetooth finds devices
-- [ ] Sound plays through the headphone jack
-- [ ] Hostname is `nexus` and `/etc/nexus/version` exists
-- [ ] `armbian-install` copies the system to the eMMC and it boots without the SD card
+Nothing below could be run without a screen and GPU. Everything visual is untested.
 
-## Prototype: needs device test
+- [ ] Image boots on the OptiPlex and Armbian's first-run setup appears
+- [ ] After setup, the lock screen appears without typing `exit`
+- [ ] Password unlocks the lock screen
+- [ ] Bar, wallpaper and animations appear and feel smooth
+- [ ] Workspace dots: click to switch, active one is a wide pill
+- [ ] Bar icons show as icons, not empty boxes (font check)
+- [ ] Super + Space, Super + Return, Super + W, Super + 1..5 and the other shortcuts
+- [ ] Notifications (try a screenshot: Print key)
+- [ ] Volume keys show the pop-up and sound works
+- [ ] Network: wired connection comes up by itself
+- [ ] Idle: dims at 4 min, locks at 5 min, screen off at 6 min
+- [ ] `nexus-bench` numbers against the targets (under 12 s to lock screen, under 700 MB)
 
-- [ ] Prototype build goes green on GitHub
-- [ ] Boots with the amber grid-sweep boot animation (from the second boot; the first boot sets it up)
-- [ ] Themed login screen with the callsign header
-- [ ] Desktop: bottom taskbar, NEXUS start button, HUD widgets top-left and top-right
-- [ ] Super opens the start menu; Super + I/A/H/G/T/K/L, Print and Super + Shift + S work
-- [ ] Every app in the prototype README table opens
-- [ ] Settings: each of the 11 categories opens; Wi-Fi connect, Bluetooth pair, volume, colour preset switch
-- [ ] Quick Settings tiles and sliders
-- [ ] Controller: Select + Start held 2 seconds toggles mouse mode
-- [ ] Touch: long-press gives a right-click
-- [ ] Micro SD: Settings > System > Storage > Prepare card, then games/files/snapshots folders appear
-- [ ] Pico lid sensor and battery level (once the Pico is wired)
+## Decisions made while building
 
-## Questions to settle in later phases
+- **`start-hyprland` instead of `uwsm`.** `SPEC.md` says the session starts through `uwsm`. Phase 1 uses Hyprland's own `start-hyprland` launcher because it has fewer parts that can't be tested without hardware. Needs Elijah's OK to keep, or switch back later.
+- **Workspace dots are NEXUS's own.** Waybar's built-in Hyprland workspace buttons send old-style commands that Hyprland refuses when it uses a Lua config, so clicks would do nothing. The dots are five small custom bar items, refreshed by Hyprland events (no background program).
+- **No screenless desktop test on GitHub.** Hyprland needs a real display device and login session there. The check verifies packages and configs instead.
+- **Quiet boot and boot splash are left for phase 6**, so boot messages stay visible while early images are being debugged.
+- **Support packages** not named in `SPEC.md` but needed for the listed pieces to work: sound (pipewire), graphics drivers (mesa), fonts, icons, `dbus-user-session`, `polkitd`, `network-manager`, `wpasupplicant`, `jq`, `procps`. Full list: `config/packages.txt`.
 
-- Third-party app sources (FreeTube, Legcord, ES-DE, Prism, VS Code, Tailscale, libretro cores): OK to use pinned versions from the makers' own sites/repos? (Phase 2)
-- Extra packages implied by the spec: Samba, gvfs-backends, openssh-server, ufw, unattended-upgrades, RustDesk (Phase 2)
-- Preset "style" differences (rounded vs sharp, rings, scope sweep): only HUD + wallpaper, windows always square? (Phase 3)
-- Timeshift saves to `/mnt/sdcard/timeshift/`, not `/mnt/sdcard/Snapshots/`: OK?
-- Quick Settings "hotspot" tile: connect to phone hotspot, or make the deck a hotspot? (Phase 5)
-- Weather source: Open-Meteo (free, no account)? (Phase 4)
-- How the micro SD gets formatted to ext4 (first-boot step or Settings > Storage)
+## Known gaps (later phases)
 
-## OptiPlex 3060 SFF (x86) build — 26 Oct 2026
+- No browser, VS Code, Godot, Minecraft or emulators yet (phase 4).
+- Wi-Fi and Bluetooth have no menu yet (phase 2). Wired network works by itself. Wi-Fi from a terminal: `nmcli device wifi connect "NAME" password "PASSWORD"`.
+- One theme (phase 3 adds five more and the theme picker).
+- Deck features (touch, on-screen keyboard, controller, Pico, breadboard module) are phase 5.
+- The Pico firmware is in `pico/lid-sensor/`. The Python helpers for it are still on `tactical-v1`.
 
-- `config/board.conf` and `prototype/config/board.conf` now say `BOARD=uefi-x86` (Armbian's generic x86 PC target, kernel 6.18 on `current`). Set `BOARD=rpi4b` to go back to the deck.
-- New `prototype/config/downloads-amd64.txt`: x86 versions of FreeTube, Legcord, ES-DE 3.5.0, Prism Launcher and the 12 emulator cores. The prototype workflow uses it automatically when the board is `uefi-x86`.
-- `prototype/userpatches/customize-image.sh`: the emulator core folder follows the CPU type; RetroArch, ES-DE and Prism Launcher paths switch to x86_64 on x86 builds; on `uefi-x86` the Pico sensor autostart and the battery HUD widget are switched off.
-- New `docs/INSTALL-OPTIPLEX.md`: flashing a USB stick, BIOS settings (UEFI, Secure Boot off, SATA = AHCI), installing to the internal drive.
+## If the desktop does not start
 
-### OptiPlex: needs device test
-- [ ] Prototype build goes green with `BOARD=uefi-x86`
-- [ ] Boots from the USB stick (F12 → UEFI BOOT) to the NEXUS login
-- [ ] Desktop, taskbar, start menu and HUD (no battery widget) appear at the monitor's own resolution
-- [ ] Ethernet and sound work
-- [ ] RetroArch/ES-DE find the cores; Prism Launcher starts Minecraft
-- [ ] `sudo armbian-install` installs to the internal drive and boots without the stick
-
-### OptiPlex build fix — 26 Oct 2026
-- First x86 build (run #8) failed while patching the kernel: three of Armbian's Apple MacBook T2 patches (`2008-i915-4-lane-quirk-for-mbp15-1`, `3001-applesmc-...`, `4001-asahi-trackpad`) no longer apply to the newest Linux 6.18.
-- `.github/workflows/build-prototype.yml` now removes Armbian's MacBook-only x86 patches (numbers 1xxx-4xxx in `patch/kernel/archive/uefi-x86-*`) before building. Only runs when `BOARD=uefi-x86`. The Intel graphics patch `7001` is kept.
+- Press **Ctrl + Alt + F2** for a text login. Log in with your user name and password.
+- The log is `~/.cache/nexus/hyprland.log`. Show the end of it with `tail -n 40 ~/.cache/nexus/hyprland.log` and send Claude a photo.
+- To stop the desktop starting by itself: `touch ~/.config/nexus/no-desktop`. Delete that file to turn it back on.

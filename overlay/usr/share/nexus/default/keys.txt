@@ -12,7 +12,7 @@ Super + V                        Float / unfloat window
 Super + J                        Flip split direction
 Super + Arrow keys               Move focus
 Super + Shift + Arrow keys       Swap windows
-Super + 1..5                     Go to workspace
+Super + 1..5                     Go to workspace (or click a dot in the bar)
 Super + Shift + 1..5             Send window to workspace
 Super + Mouse drag               Move window (right button resizes)
 Super + Escape                   Power menu

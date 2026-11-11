@@ -3,35 +3,98 @@
   "position": "top",
   "height": 38,
   "spacing": 0,
-  "modules-left": ["custom/nexus", "hyprland/workspaces"],
-  "modules-center": ["clock"],
-  "modules-right": ["bluetooth", "network", "wireplumber", "custom/power"],
+  "modules-left": [
+    "custom/nexus",
+    "custom/ws1",
+    "custom/ws2",
+    "custom/ws3",
+    "custom/ws4",
+    "custom/ws5"
+  ],
+  "modules-center": [
+    "clock"
+  ],
+  "modules-right": [
+    "bluetooth",
+    "network",
+    "wireplumber",
+    "custom/power"
+  ],
   "custom/nexus": {
-    "format": "◆",
+    "format": "\u25c6",
     "tooltip": false,
     "on-click": "nexus-menu"
   },
-  "hyprland/workspaces": {
-    "format": " ",
-    "persistent-workspaces": { "*": 5 },
-    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
-    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  "custom/ws1": {
+    "exec": "nexus-ws-state 1",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "format": "{}",
+    "tooltip": false,
+    "on-click": "nexus-workspace 1",
+    "on-scroll-up": "nexus-workspace prev",
+    "on-scroll-down": "nexus-workspace next"
+  },
+  "custom/ws2": {
+    "exec": "nexus-ws-state 2",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "format": "{}",
+    "tooltip": false,
+    "on-click": "nexus-workspace 2",
+    "on-scroll-up": "nexus-workspace prev",
+    "on-scroll-down": "nexus-workspace next"
+  },
+  "custom/ws3": {
+    "exec": "nexus-ws-state 3",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "format": "{}",
+    "tooltip": false,
+    "on-click": "nexus-workspace 3",
+    "on-scroll-up": "nexus-workspace prev",
+    "on-scroll-down": "nexus-workspace next"
+  },
+  "custom/ws4": {
+    "exec": "nexus-ws-state 4",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "format": "{}",
+    "tooltip": false,
+    "on-click": "nexus-workspace 4",
+    "on-scroll-up": "nexus-workspace prev",
+    "on-scroll-down": "nexus-workspace next"
+  },
+  "custom/ws5": {
+    "exec": "nexus-ws-state 5",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "format": "{}",
+    "tooltip": false,
+    "on-click": "nexus-workspace 5",
+    "on-scroll-up": "nexus-workspace prev",
+    "on-scroll-down": "nexus-workspace next"
   },
   "clock": {
     "format": "{:%a %d %b  %H:%M}",
     "tooltip-format": "<tt>{calendar}</tt>"
   },
   "bluetooth": {
-    "format": "",
+    "format": "\uf293",
     "format-no-controller": "",
     "tooltip-format": "Bluetooth: {status}",
     "on-click": "nexus-menu"
   },
   "network": {
-    "format-wifi": "",
-    "format-ethernet": "",
-    "format-linked": "",
-    "format-disconnected": "",
+    "format-wifi": "\uf1eb",
+    "format-ethernet": "\uf0e8",
+    "format-linked": "\uf0e8",
+    "format-disconnected": "\uf127",
     "tooltip-format-wifi": "{essid} ({signalStrength}%)  {ipaddr}",
     "tooltip-format-ethernet": "Wired  {ipaddr}",
     "tooltip-format-disconnected": "No network",
@@ -39,13 +102,16 @@
   },
   "wireplumber": {
     "format": "{icon}",
-    "format-muted": "",
-    "format-icons": ["", ""],
+    "format-muted": "\uf026",
+    "format-icons": [
+      "\uf027",
+      "\uf028"
+    ],
     "tooltip-format": "Volume {volume}%",
     "on-click": "nexus-osd volume mute"
   },
   "custom/power": {
-    "format": "",
+    "format": "\uf011",
     "tooltip": false,
     "on-click": "nexus-power"
   }

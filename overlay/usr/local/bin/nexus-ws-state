@@ -1,0 +1,12 @@
+#!/bin/bash
+# Tells the top bar how to draw one workspace dot.
+#   nexus-ws-state 3   prints JSON with class "active", "occupied" or "empty"
+n="${1:-1}"
+state=empty
+active="$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id' 2>/dev/null)"
+if [[ "$active" == "$n" ]]; then
+	state=active
+elif hyprctl workspaces -j 2>/dev/null | jq -e --argjson n "$n" 'any(.[]; .id == $n and .windows > 0)' >/dev/null 2>&1; then
+	state=occupied
+fi
+printf '{"text": " ", "class": ["ws", "%s"], "tooltip": false}\n' "$state"

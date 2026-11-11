@@ -36,19 +36,19 @@ tooltip label { color: {{fg}}; }
     background: {{raised}};
 }
 
-#workspaces { margin-left: 6px; }
-#workspaces button {
+/* Workspace dots: a wide bright pill for the one you are on, a dot for the rest. */
+.ws {
     min-width: 8px;
     min-height: 8px;
-    margin: 15px 6px;
+    margin: 15px 7px;
     padding: 0;
     border-radius: 4px;
-    background: {{fg}};
+    font-size: 1px;
     color: transparent;
-    transition: min-width 220ms cubic-bezier(0.23, 1, 0.32, 1), background 220ms ease;
+    background: {{muted}};
+    opacity: 0.45;
+    transition: min-width 220ms cubic-bezier(0.23, 1, 0.32, 1), background 220ms ease, opacity 220ms ease;
 }
-#workspaces button label { font-size: 1px; color: transparent; }
-#workspaces button.empty { background: {{muted}}; opacity: 0.45; }
-#workspaces button.active { min-width: 22px; background: {{accent}}; opacity: 1; }
-#workspaces button.urgent { background: {{urgent}}; }
-#workspaces button:hover { background: {{accent2}}; box-shadow: none; }
+.ws.occupied { background: {{fg}}; opacity: 1; }
+.ws.active { min-width: 22px; background: {{accent}}; opacity: 1; }
+.ws:hover { background: {{accent2}}; opacity: 1; }

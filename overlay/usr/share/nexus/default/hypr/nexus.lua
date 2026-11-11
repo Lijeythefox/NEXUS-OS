@@ -19,7 +19,7 @@ local function load(path)
 end
 
 -- Shortcuts first, so the keyboard still works if a later file has a problem.
-for _, name in ipairs({ "bindings", "input", "looknfeel", "rules", "autostart" }) do
+for _, name in ipairs({ "bindings", "input", "looknfeel", "rules", "events", "autostart" }) do
     load(dir .. name .. ".lua")
 end
 

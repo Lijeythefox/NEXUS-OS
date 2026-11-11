@@ -1,0 +1,8 @@
+#!/bin/bash
+# Turns the screen off or on (used when the desktop has been idle).
+#   nexus-screen off | on
+case "${1:-}" in
+off) exec hyprctl dispatch 'hl.dsp.dpms({ action = "off" })' ;;
+on) exec hyprctl dispatch 'hl.dsp.dpms({ action = "on" })' ;;
+*) echo "usage: nexus-screen off|on" >&2; exit 2 ;;
+esac

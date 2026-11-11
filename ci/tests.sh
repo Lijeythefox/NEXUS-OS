@@ -113,6 +113,28 @@ check "auto-logs in the desktop user after setup" getty_user_after_setup
 check "plain login prompt when auto-login is switched off" getty_prompt_when_switched_off
 check "never auto-logs in root once setup is done" getty_never_autologins_root_after_setup
 
+echo "nexus-ws-state"
+mkhypr() { # active workspace id, workspaces JSON
+	mkdir -p "$T/hy"
+	cat >"$T/hy/hyprctl" <<FAKE
+#!/bin/bash
+case "\$*" in
+*activeworkspace*) echo '{"id": $1, "windows": 0}' ;;
+*workspaces*) echo '$2' ;;
+esac
+FAKE
+	chmod +x "$T/hy/hyprctl"
+}
+ws() { PATH="$T/hy:$PATH" bash "$BIN/nexus-ws-state" "$1"; }
+ws_active() { mkhypr 2 '[{"id":1,"windows":1},{"id":2,"windows":0}]'; ws 2 | jq -e '.class == ["ws","active"] and .tooltip == false' >/dev/null; }
+ws_occupied() { mkhypr 2 '[{"id":1,"windows":3},{"id":2,"windows":0}]'; ws 1 | jq -e '.class == ["ws","occupied"]' >/dev/null; }
+ws_empty() { mkhypr 2 '[{"id":1,"windows":3},{"id":2,"windows":0}]'; ws 4 | jq -e '.class == ["ws","empty"]' >/dev/null; }
+ws_no_hyprland() { mkdir -p "$T/hy"; printf '#!/bin/bash\nexit 1\n' >"$T/hy/hyprctl"; chmod +x "$T/hy/hyprctl"; ws 1 | jq -e '.class == ["ws","empty"]' >/dev/null; }
+check "the workspace you are on is marked active" ws_active
+check "a workspace with windows is marked occupied" ws_occupied
+check "a workspace with no windows is marked empty" ws_empty
+check "still prints valid output when Hyprland does not answer" ws_no_hyprland
+
 echo
 echo "$pass passed, $failed failed"
 ((failed == 0))

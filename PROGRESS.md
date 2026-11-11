@@ -22,7 +22,7 @@ The old tactical version (XFCE, HUD, Settings app) and its progress notes are on
 
 The **Check NEXUS OS** workflow runs on every push (about 3 minutes):
 
-- All 47 packages install in a clean Debian 13 (42 from stable, 5 from backports). The reported `libxkbcommon` clash did not happen.
+- All 48 packages install in a clean Debian 13 (43 from stable, 5 from backports). The reported `libxkbcommon` clash did not happen.
 - `Hyprland --verify-config` on the NEXUS config: `config ok` (real Hyprland 0.55.2). A deliberately broken config is rejected, so the check can fail.
 - foot and fuzzel accept their generated configs. Every command the desktop calls exists.
 - 18 unit tests: theme rendering (missing colours and bad colours are refused), session start and the 3-failures guard, auto-login rules, workspace dot states.

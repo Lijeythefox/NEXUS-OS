@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**NEXUS OS 2, Phase 1: smooth desktop on the OptiPlex.** Built and pushed. Waiting for the GitHub image build and Elijah's first test on the OptiPlex 3060.
+**NEXUS OS 2, Phase 1: smooth desktop on the OptiPlex.** The first image is built: `NEXUS-OS_2.0-dev-20261111-4c668f2_uefi-x86` (12 Nov 2026, about 1.7 GB download). Waiting for Elijah's first test on the OptiPlex 3060.
 
 The old tactical version (XFCE, HUD, Settings app) and its progress notes are on the `tactical-v1` branch.
 
@@ -53,6 +53,8 @@ Nothing below could be run without a screen and GPU. Everything visual is untest
 - **Support packages** not named in `SPEC.md` but needed for the listed pieces to work: sound (pipewire), graphics drivers (mesa), fonts, icons, `dbus-user-session`, `polkitd`, `network-manager`, `wpasupplicant`, `jq`, `procps`. Full list: `config/packages.txt`.
 
 ## Known gaps (later phases)
+
+- The image download is about 1.7 GB, which is big for a minimal system. Find out what takes the space in the phase 6 size and speed pass.
 
 - No browser, VS Code, Godot, Minecraft or emulators yet (phase 4).
 - Wi-Fi and Bluetooth have no menu yet (phase 2). Wired network works by itself. Wi-Fi from a terminal: `nmcli device wifi connect "NAME" password "PASSWORD"`.

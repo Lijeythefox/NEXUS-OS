@@ -1,0 +1,129 @@
+name: Make NEXUS OS virtual machine
+
+# Turns the newest finished image into a virtual machine for VMware Workstation Pro,
+# so NEXUS OS can be tried on a Windows PC without flashing a USB stick.
+# Runs by itself after every successful image build, or by hand (Run workflow).
+
+on:
+  workflow_run:
+    workflows: ["Build NEXUS OS image"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Image build run number (leave empty for the newest successful one)"
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  vm:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DISK_GB: 32
+    steps:
+      - name: Find the image build
+        run: |
+          run_id="${{ github.event.workflow_run.id || inputs.run_id }}"
+          if [[ -z "$run_id" ]]; then
+            run_id="$(gh run list -R "$GITHUB_REPOSITORY" --workflow build.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          fi
+          name="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" --jq '[.artifacts[] | select(.name | startswith("NEXUS-OS_"))][0].name')"
+          if [[ -z "$name" || "$name" == null ]]; then
+            echo "::error::No NEXUS-OS image found in run $run_id"; exit 1
+          fi
+          echo "RUN_ID=$run_id" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=$name" >> "$GITHUB_ENV"
+          echo "Using $name from run $run_id"
+
+      - name: Download the image
+        run: |
+          gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n "$IMAGE_NAME" -D img
+          ls -lh img
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-utils xz-utils zip
+
+      - name: Convert to a VMware disk
+        run: |
+          xz -d -T0 img/*.img.xz
+          raw="$(ls img/*.img)"
+          # Make the virtual disk bigger than the image. The extra space costs nothing until used,
+          # and NEXUS OS grows into it on first boot.
+          qemu-img resize -f raw "$raw" "${DISK_GB}G"
+          mkdir -p vm/NEXUS-OS
+          qemu-img convert -p -f raw -O vmdk -o subformat=monolithicSparse,adapter_type=lsilogic "$raw" vm/NEXUS-OS/NEXUS-OS.vmdk
+          rm -f "$raw"
+          ls -lh vm/NEXUS-OS
+
+      - name: Write the VMware settings file
+        run: |
+          cat > vm/NEXUS-OS/NEXUS-OS.vmx <<'VMX'
+          .encoding = "UTF-8"
+          config.version = "8"
+          virtualHW.version = "21"
+          displayName = "NEXUS OS"
+          guestOS = "debian12-64"
+          firmware = "efi"
+          uefi.secureBoot.enabled = "FALSE"
+          memsize = "4096"
+          numvcpus = "2"
+          cpuid.coresPerSocket = "2"
+          mks.enable3d = "TRUE"
+          svga.graphicsMemoryKB = "1048576"
+          svga.autodetect = "TRUE"
+          nvme0.present = "TRUE"
+          nvme0:0.present = "TRUE"
+          nvme0:0.fileName = "NEXUS-OS.vmdk"
+          ethernet0.present = "TRUE"
+          ethernet0.connectionType = "nat"
+          ethernet0.virtualDev = "vmxnet3"
+          ethernet0.addressType = "generated"
+          usb.present = "TRUE"
+          ehci.present = "TRUE"
+          usb_xhci.present = "TRUE"
+          sound.present = "TRUE"
+          sound.virtualDev = "hdaudio"
+          sound.autoDetect = "TRUE"
+          tools.syncTime = "TRUE"
+          VMX
+          sed -i 's/^          //' vm/NEXUS-OS/NEXUS-OS.vmx
+          cat > vm/NEXUS-OS/READ-ME-FIRST.txt <<'TXT'
+          NEXUS OS test machine for VMware Workstation Pro
+          ===============================================
+
+          1. Unzip this whole folder somewhere with 40 GB free (e.g. Documents\Virtual Machines\NEXUS-OS).
+          2. In VMware Workstation Pro: File > Open... > pick NEXUS-OS.vmx.
+          3. If it asks "Did you move it or copy it?", click "I Copied It".
+          4. Click "Power on this virtual machine".
+          5. First boot: Armbian's setup asks for a root password, a shell (pick bash),
+             your user name and password. Then the NEXUS lock screen appears.
+
+          Click inside the window to use it. Ctrl + Alt gives the mouse back to Windows.
+          The Windows key may open the Windows Start menu instead of reaching NEXUS:
+          in VMware use View > Full Screen (Ctrl + Alt + Enter) so shortcuts go to NEXUS.
+
+          If the screen stays black: VM > Settings > Display > tick "Accelerate 3D graphics".
+          TXT
+          sed -i 's/^          //' vm/NEXUS-OS/READ-ME-FIRST.txt
+
+      - name: Pack it
+        run: |
+          stamp="${IMAGE_NAME#NEXUS-OS_}"
+          echo "VM_NAME=NEXUS-OS-VM_${stamp}" >> "$GITHUB_ENV"
+          ls -lh vm/NEXUS-OS
+
+      - name: Upload the virtual machine
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VM_NAME }}
+          path: vm/
+          compression-level: 6
+          retention-days: 30

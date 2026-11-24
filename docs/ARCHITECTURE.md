@@ -248,15 +248,50 @@ All in `overlay/usr/local/bin/`. Each is small, does one thing, and has a short 
 | `nexus-screen` | Screen off/on for hypridle | 1 |
 | `nexus-workspace`, `nexus-ws-state` | Bar workspace dots | 1 |
 | `nexus-bench` | Boot time, idle memory, five slowest services | 1 |
+| `nexus-apps` | App installer: picker, first-login question, installs/removes from `apps.conf` (Python) | 1 (built early) |
 | `nexus-getty` (`/usr/local/sbin/`) | Auto-login decision | 1 |
 
 Planned commands are listed per phase in [ROADMAP.md](ROADMAP.md).
 
-## 7. Board independence
+## 7. Apps (`nexus-apps`)
+
+No apps are in the image (D-25). The desktop is the image; apps arrive afterwards.
+
+```
+ first unlock ─► nexus-autostart ─► nexus-apps first-run
+                                      │ waits for hyprlock to close, checks internet
+                                      ▼
+                         picker (fuzzel, nexus-pick --index)
+                                      │ Go
+                                      ▼
+            foot terminal ─► sudo nexus-apps apply --install … --remove … --user <you>
+                                      │
+     ┌──────────────┬─────────────────┼───────────────────┬──────────────────┐
+  extra repos    apt-get update    apt-get install       downloads          pipx (as you)
+  (key + list)                     (one call, no         (GitHub/GitLab     services off
+                                    recommends)           newest release,    setup steps
+                                                          fingerprint check)
+                                      ▼
+                    /var/lib/nexus/apps/<id>   (marks what's installed)
+```
+
+| Part | Where |
+| --- | --- |
+| App list | `/usr/share/nexus/apps.conf` (INI: one `[id]` per app; settings explained at the top of the file) |
+| Installed marks | `/var/lib/nexus/apps/<id>`, plus `<id>.json` for downloads (files made, `.deb` package name) so removal is exact |
+| Unpacked AppImages and zip apps | `/opt/nexus-apps/<id>/`, started by `/usr/local/bin/<command>`, listed by `/usr/share/applications/nexus-<id>.desktop` |
+| Asked-once mark | `~/.config/nexus/apps-asked` |
+| Extra repositories | `/etc/apt/sources.list.d/nexus-<id>.list` + the key file named in the list |
+
+How downloads work: the newest non-draft release (test releases only when the app says `prerelease = yes`) with a file matching `amd64_file` / `arm64_file`. GitHub publishes a SHA-256 fingerprint for release files; when present the download must match it or it's deleted. AppImages are unpacked with `--appimage-extract` **as the user** in a temporary folder, then moved into `/opt` as root, so no downloaded program runs as root and FUSE isn't needed.
+
+If one app fails, the rest carry on; the summary at the end names what wasn't done and why, and only finished apps are marked installed.
+
+## 8. Board independence
 
 Only `config/board.conf` may name a board. From phase 5 this becomes `config/boards/<board>.conf` and the build makes one image per board. Anything a board needs (kernel branch, firmware, display scale, low-effects default) goes in that file. Scripts that need to know read `/etc/nexus/board` at run time, never guess from the CPU.
 
-## 8. The deck parts (phases 6–7, planned)
+## 9. The deck parts (phases 6–7, planned)
 
 ```
                       ┌─────────────── deck board ───────────────┐
@@ -275,7 +310,7 @@ Only `config/board.conf` may name a board. From phase 5 this becomes `config/boa
 
 Rules for the deck parts: nothing runs all the time unless it must (the Pico helper and the module service start on plug-in; the AI server starts on first question and stops after 10 idle minutes).
 
-## 9. Testing layers
+## 10. Testing layers
 
 | Layer | Where | Catches |
 | --- | --- | --- |

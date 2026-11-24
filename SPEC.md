@@ -40,8 +40,7 @@ v2 lives at the repo root. The `prototype/` folder and its workflow are removed 
 | `config/board.conf` | Board and kernel branch, e.g. `BOARD=uefi-x86` |
 | `config/packages.txt` | Debian stable packages to preinstall |
 | `config/packages-backports.txt` | Packages installed from trixie-backports (Hyprland family only) |
-| `config/downloads.txt` | Pinned downloads (Godot, Prism, ES-DE, emulator cores), with an `amd64` and `arm64` link per line |
-| `config/install-menu.txt` | Apps offered in the NEXUS menu's Install list, with which machine types they support |
+| `overlay/usr/share/nexus/apps.conf` | Every app `nexus-apps` can install: ticked or extra, Debian packages, extra repositories, release downloads, PC-only marks |
 | `userpatches/customize-image.sh` | Runs inside the image during the build |
 | `overlay/` | Files copied straight into the image |
 | `overlay/usr/share/nexus/default/` | NEXUS default configs (Hyprland, Waybar, fuzzel, mako, foot, hypridle, hyprlock). Never edited by the user |
@@ -146,7 +145,7 @@ One keyboard- and touch-friendly menu replaces the old Settings app. Built as `o
 | Apps | Opens the app launcher |
 | Style | Theme (picker with colour preview), Wallpaper (next / pick), Font size, Low-effects mode on/off, Animations on/off |
 | Setup | Wi-Fi (`nexus-wifi`: list networks, tap to connect, password prompt, using `nmcli`), Bluetooth (`nexus-bluetooth`: scan, pair, connect, forget, using `bluetoothctl`), Sound (`pavucontrol`), Display (`wdisplays`), Idle and lock times, Keyboard layout, Time zone |
-| Install | Install or remove the optional apps in `config/install-menu.txt` (only those that support this machine are shown) |
+| Install apps | Opens the `nexus-apps` picker: install or remove any app in `apps.conf` (only those that support this machine are shown) |
 | Update | Install updates now (`apt` with a terminal showing progress), Show NEXUS version |
 | Tools | Screenshot, Colour picker (hyprpicker, backports), Show shortcuts, Restart the bar |
 | Power | Lock, Sleep, Restart, Shut down, Log out |
@@ -174,42 +173,57 @@ How it works:
 
 ## Apps
 
-### Preinstalled
+**No apps are in the image.** The image holds only the desktop, so it builds faster and downloads smaller. After the first unlock, `nexus-apps` shows a picker with Elijah's usual apps ticked; you press Go, type your password in the terminal that opens, and it installs them. It can be opened again any time (NEXUS menu > Install apps, or `nexus-apps`) to add or remove apps. It needs internet; without it, it says so and asks again at the next login.
 
-| Use | App | Source |
+The list lives in `overlay/usr/share/nexus/apps.conf`. Each app is installed one of these ways:
+
+- **Debian packages** (all in one `apt-get install --no-install-recommends` call).
+- **An extra apt repository** (VS Code, Tailscale): key and source line in the list.
+- **The newest release on GitHub or GitLab** for this machine (`.deb`, AppImage or zip). The file's fingerprint (SHA-256) is checked when the project publishes one. AppImages are unpacked into `/opt/nexus-apps/` (no FUSE needed), as the user, never run as root.
+- **pipx**, as the user, for Python tools.
+
+PC-only apps are hidden on ARM boards.
+
+### Ticked by default
+
+| Use | App | How |
 | --- | --- | --- |
 | Browser | Chromium (Wayland mode) | Debian |
 | Code | VS Code | Microsoft's repo |
-| Game dev | Godot 4 | Official build, pinned in `downloads.txt` |
-| Pico | Thonny, mpremote, picotool | Debian |
-| Python | python3, pip, venv, pipx | Debian |
-| Minecraft | Prism Launcher + Java 21 | Official AppImage (unpacked) + Debian |
-| Retro games | ES-DE + RetroArch + cores | Official AppImage + Debian + libretro builds |
+| Pico | mpremote, picotool | pipx, Debian |
+| Python | pip, venv, pipx | Debian |
 | VPN | Tailscale | Tailscale's repo |
-| Remote shell | OpenSSH client and server (server off by default) | Debian |
-| AI | Iris desktop companion (see Iris section) | Iris repo's Linux `.deb`, pinned in `downloads.txt` |
-| Terminal tools | btop, fastfetch, lazygit, git, ripgrep, fd-find, bat, fzf, curl | Debian |
-| Everyday | Thunar, imv (pictures), mpv (video and music), Evince (PDF), Mousepad (notes), gnome-calculator | Debian |
+| Terminal tools | btop, fastfetch, lazygit, git, ripgrep, fd-find, bat, fzf | Debian |
+| Everyday | imv (pictures), mpv (video and music), Evince (PDF), Mousepad (notes), gnome-calculator | Debian |
+| Remote shell | OpenSSH server (switched off right after installing; on from the menu) | Debian |
 
-### Install menu (one tap, not in the base image)
+Thunar (files) and foot (terminal) are part of the desktop, so they are in the image.
 
-| App | Machines |
-| --- | --- |
-| KiCad | All |
-| Arduino IDE 2 | PC only (no official ARM build) |
-| Bambu Studio | PC only (no official ARM build) |
-| LibreOffice | All |
-| FreeTube | All |
-| Legcord (Discord) | All |
-| Remmina (remote desktop) | All |
-| Timeshift (snapshots) | All |
-| Samba share for the `ROMs` folder | All |
+### Extras (listed, not ticked)
+
+| App | How | Machines |
+| --- | --- | --- |
+| Godot 4 | GitHub release (zip) | All |
+| Thonny | Debian | All |
+| Prism Launcher + Java 21 (Minecraft) | GitHub release (AppImage) + Debian | All |
+| RetroArch + cores (NES, SNES, Game Boy, Mega Drive) | Debian | All |
+| ES-DE (game menu) | GitLab release (AppImage) | All |
+| Iris (AI desktop companion) | GitHub release (`.deb`) | All (once the Iris repo publishes Linux builds) |
+| KiCad | Debian | All |
+| Arduino IDE 2 | GitHub release (AppImage) | PC only |
+| Bambu Studio | GitHub release (AppImage) | PC only |
+| LibreOffice | Debian | All |
+| FreeTube | GitHub release (`.deb`) | All |
+| Legcord (Discord) | GitHub release (`.deb`) | All |
+| Remmina (remote desktop) | Debian | All |
+| Timeshift (snapshots) | Debian | All |
+| ROMs share | Debian (Samba) + NEXUS setup | All |
 
 ## Iris (AI)
 
 The AI on NEXUS OS is **Iris**, Elijah's own desktop companion app ([Lijeythefox/IRIS](https://github.com/Lijeythefox/IRIS), a Roamies-based Tauri app, AGPL-3.0): an amber globe that lives on the screen, talks back, keeps reminders and to-do lists, draws answers beside what you're reading, and opens apps and files. NEXUS ships the Iris app and sets it up for Hyprland; it doesn't build a separate AI app. Full design: `docs/AI.md`.
 
-- **The app:** a pinned Iris `.deb` (amd64 and arm64, built by a Linux workflow in the Iris repo) installed from `config/downloads.txt`. Starts with the desktop after the lock screen. Its own updater is off; it updates with NEXUS.
+- **The app:** an extra in `nexus-apps` (not ticked by default): the newest Iris `.deb` for this machine from the Iris repo's releases (amd64 and arm64, built by a Linux workflow added to the Iris repo in phase 4). Once installed it starts with the desktop after the lock screen.
 - **Hyprland setup:** Iris runs through XWayland (its own Linux code does this). Window rules keep its transparent overlay floating, pinned, unfocused and free of borders, blur, shadows and animations. Wayland doesn't give apps global shortcuts, so Hyprland binds Iris's built-in commands: Super + I = `roamies --ask` (type), Super + Shift + I = `roamies --talk` (speak), Super + Alt + I = `roamies --panel`, Super + Ctrl + I = `roamies --list`. "Hey Iris" works if switched on in Iris. Screenshots go through `xdg-desktop-portal-hyprland`. Waybar gets a tray. Sign-ins and keys are stored with `gnome-keyring` and `secret-tool`.
 - **Brains (picked in Iris's panel):** online sign-in (Claude, ChatGPT) or an API key; the **home PC's Ollama** over home Wi-Fi or Tailscale (added from NEXUS menu > Setup > Iris); and, on the deck, a **local model** in Iris's Lite mode.
 - **Offline on the deck (phase 7):** `llama-server` (llama.cpp) on `127.0.0.1:8088`, OpenAI-compatible, added to Iris's server list. A small tool-using model (about 3 to 4 billion parameters, 4-bit, at least 16k context, as Iris's Lite mode requires) downloaded from the menu to the SD card (`/mnt/sdcard/models/`), never put in the image. `nexus-iris-brain` switches Iris to the home PC when it answers within 2 seconds, otherwise to the deck's model.
@@ -279,7 +293,7 @@ The case is designed and 3D-printed from scratch (no bought case), sized around 
 | Windows-11-style Settings app | NEXUS menu |
 | LightDM login + light-locker | Auto-login straight into hyprlock |
 | Tactical sound theme | Removed (quiet by default) |
-| LibreOffice, FreeTube, Legcord, Remmina, Timeshift, Samba preinstalled | Moved to the Install menu |
+| Apps preinstalled in the image | No apps in the image: `nexus-apps` installs the ones you pick after the first unlock |
 | Callsign | Removed |
 | - | Godot 4, lazygit, btop, fastfetch added |
 
@@ -290,7 +304,7 @@ Only one phase at a time. The next starts after Elijah confirms the current one 
 1. **Smooth desktop on the OptiPlex.** Remove `prototype/`, rework the workflow (build check + image build with `BUILD_DESKTOP=no`), backports set up, Hyprland + auto-login + hyprlock, Waybar, fuzzel, mako, SwayOSD, foot, Thunar, Tokyo Night hard-wired through the template system, all shortcuts, animations, service trimming, `nexus-bench`. Update `CLAUDE.md` to match this spec.
 2. **NEXUS menu.** All sections except Install, plus `nexus-wifi`, `nexus-bluetooth`, power menu, screenshots, idle settings.
 3. **Themes.** All six themes, generated wallpapers, theme picker, live switching, low-effects mode switch.
-4. **Apps.** Everything in the Preinstalled table (including the Iris app with its Hyprland setup and the home PC brain), then the Install menu.
+4. **Apps.** Test every app in `apps.conf` through `nexus-apps` (the installer itself was built early, on 25 Nov 2026), the Iris app's Linux build and Hyprland setup, and the home PC brain.
 5. **Deck board.** Choose and buy the board (must run a small AI model), add it as a second build target, bring the desktop up on it with the Waveshare screen, automatic low-effects mode.
 6. **Deck hardware.** Touch swipes, on-screen keyboard, controller mouse mode, Pico lid/battery, SD card setup, module slots and the breadboard module (pop-up, `BB` bar chip, over-current warning).
 7. **Offline AI.** Local model server for Iris's Lite mode, model downloads, automatic home-PC/local brain switch.

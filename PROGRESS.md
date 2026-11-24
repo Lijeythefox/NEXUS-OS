@@ -8,7 +8,18 @@ The old tactical version (XFCE, HUD, Settings app) and its progress notes are on
 
 Tested so far: only in the VMware VM and the browser simulator. **The OptiPlex test is next** (checklist below and in `docs/ROADMAP.md`).
 
-## Latest change (25 Nov 2026): Iris is the Roamies-based Iris app
+## Latest change (25 Nov 2026): app installer, no apps in the image
+
+- New `nexus-apps` (`overlay/usr/local/bin/nexus-apps`) and its list `overlay/usr/share/nexus/apps.conf`. After the first unlock (with internet) a picker shows your apps, your usual ones ticked; Go installs them in a terminal. Also in the menu: **NEXUS menu › Install apps**.
+- Ticked: Chromium, VS Code, Pico tools (mpremote, picotool), Python tools, Tailscale, terminal tools, everyday apps, SSH server (installed switched off). Extras: Godot, Thonny, Prism Launcher, RetroArch, ES-DE, Iris, KiCad, Arduino IDE 2, Bambu Studio, LibreOffice, FreeTube, Legcord, Remmina, Timeshift, ROMs share.
+- 16 new tests (34 in total). The GitHub check now dry-runs every Debian package in the list and really installs a Debian app, Godot and Prism Launcher.
+- `nexus-open` points to the installer when an app is missing; the on-screen keyboard message says phase 6.
+- `SPEC.md` Apps section rewritten (D-25, D-26 in `docs/DECISIONS.md`); roadmap phase 4 updated.
+- The image itself doesn't shrink from this: phase 1 never had apps in it. The 1.7 GB is the desktop plus Armbian's base; trimming that is phase 8.
+
+Needs device test: the first-login picker, the password terminal, every app installing and opening, removal, the no-internet message.
+
+## Earlier change (25 Nov 2026): Iris is the Roamies-based Iris app
 
 Docs only. The AI on NEXUS is now Elijah's own Iris desktop companion (`Lijeythefox/IRIS`), not Open WebUI in a browser window. Updated: `docs/AI.md` (rewritten), `SPEC.md` (Iris section, shortcuts Super + I / Shift + I / Alt + I / Ctrl + I, apps table), `docs/ROADMAP.md` (tasks 4.7a–e, phase 7), `docs/USER-GUIDE.md`, `docs/DECISIONS.md` (D-24), `docs/HARDWARE.md` (16 GB deck RAM recommended), glossary. Phase 4 includes a Linux build workflow in the Iris repo.
 
@@ -58,6 +69,7 @@ Nothing below could be run without a screen and GPU. Everything visual is untest
 - [ ] Network: wired connection comes up by itself
 - [ ] Idle: dims at 4 min, locks at 5 min, screen off at 6 min
 - [ ] `nexus-bench` numbers against the targets (under 12 s to lock screen, under 700 MB)
+- [ ] App picker appears after the first unlock; Go installs the ticked apps; NEXUS menu › Install apps opens it again
 
 ## Decisions made while building
 

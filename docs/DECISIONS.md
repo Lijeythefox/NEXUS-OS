@@ -30,6 +30,8 @@ Status: **Decided** (Elijah agreed) · **Provisional** (made while building, Eli
 | D-22 | Default offline model | **Open** |
 | D-23 | Home PC Windows Home or Pro (remote desktop choice) | **Open** |
 | D-24 | Iris on NEXUS is Elijah's Roamies-based Iris app | Decided |
+| D-25 | No apps in the image: `nexus-apps` installs them after the first unlock | Decided |
+| D-26 | Downloads use the newest release, checked by fingerprint when published | Provisional |
 
 ---
 
@@ -147,4 +149,17 @@ Status: **Decided** (Elijah agreed) · **Provisional** (made while building, Eli
 - **Changes from D-16:** offline AI on the deck stays, but runs through Iris's Lite mode, which needs a tool-using model with at least 16k context (about 3–4B parameters). That makes **16 GB** the recommended deck RAM.
 - **Costs:** WebKitGTK adds roughly 100 MB to the image; Iris's idle memory must fit the speed targets (measured in phase 4); clicking inside other apps isn't possible on Wayland; spoken replies need an online voice service.
 - **Replaces:** the Open WebUI app-window plan in the first version of `docs/AI.md`.
+
+### D-25 No apps in the image
+
+- **Decided:** 25 Nov 2026, Elijah: *"create a script to install all the apps i want so the image takes as little time as possible and be small as possible"*. Chose: first login with a picker; his own list of ticked apps.
+- **Means:** the image is only the desktop. `nexus-apps` (`overlay/usr/local/bin/nexus-apps`) reads `overlay/usr/share/nexus/apps.conf` and installs what's ticked after the first unlock; it's in the NEXUS menu for later. Replaces the plan's "Preinstalled" table, `config/downloads.txt` and `config/install-menu.txt`.
+- **Ticked by default:** Chromium, VS Code, Pico tools (mpremote, picotool), Python tools, Tailscale, terminal tools, everyday apps, SSH server. **Moved to extras** at Elijah's request: Godot, Thonny, Prism Launcher, the retro games apps, Iris.
+- **Costs:** the first start needs internet and takes a while to install; app versions differ between machines set up on different days.
+- **Built early:** the installer belongs to phase 4 but was built during phase 1 because Elijah asked for it. Device testing still happens in phase 4.
+
+### D-26 Newest releases, fingerprint-checked when possible (provisional)
+
+- **Why:** pinning each download to a version and fingerprint means updating NEXUS every time an app releases. Instead the installer picks the newest release and checks the SHA-256 fingerprint that GitHub publishes for each file. GitLab (ES-DE) and some older GitHub files publish none; those rely on the HTTPS download alone, and the log says so.
+- **Revisit:** pin versions if a new release ever breaks an app on NEXUS.
 

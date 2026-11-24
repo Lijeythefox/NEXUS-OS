@@ -18,7 +18,7 @@ Chapters marked **(coming in phase N)** describe features that are planned but n
 10. [Network](#10-network)
 11. [The NEXUS menu](#11-the-nexus-menu-coming-in-phase-2) (phase 2)
 12. [Themes and wallpapers](#12-themes-and-wallpapers)
-13. [Apps and the Install menu](#13-apps-and-the-install-menu-coming-in-phase-4) (phase 4)
+13. [Apps](#13-apps)
 14. [Iris (AI)](#14-iris-ai-coming-in-phase-4-and-7) (phases 4 and 7)
 15. [Deck features](#15-deck-features-coming-in-phase-6) (phase 6)
 16. [Making it your own](#16-making-it-your-own)
@@ -39,6 +39,8 @@ The very first time NEXUS starts, Armbian asks a few questions in a black text s
 4. **Language and time zone:** it guesses from the internet; press Enter to accept, or pick yours (Hobart is `Australia/Hobart`).
 
 After the last question NEXUS logs the admin account out by itself, logs your account in and shows the **lock screen**. Type your password and press Enter. You are in.
+
+**Then pick your apps.** NEXUS keeps its download small by leaving apps out of the image. After you unlock the first time (with internet), a list appears with your usual apps ticked (Chromium, VS Code, Pico tools, Python tools, Tailscale, terminal tools, everyday apps, SSH server). Tick or untick with a click or Enter, then choose **▶ Go**. A terminal opens and asks for your password; it installs everything and tells you when it's done. See [chapter 13](#13-apps).
 
 From then on, every start goes straight to the lock screen.
 
@@ -206,7 +208,7 @@ Open with **Super + Alt + Space** or click the **◆** logo. It looks like the l
 | Apps | Opens the app launcher |
 | Style | Theme, wallpaper, font size, low-effects mode, animations on/off |
 | Setup | Wi-Fi, Bluetooth, sound, display, idle and lock times, keyboard layout, time zone, Iris, (deck) modules and SD card |
-| Install | Optional apps, one tap to install or remove (phase 4) |
+| Install apps | The app picker (`nexus-apps`): install or remove apps (works now) |
 | Update | Install updates, NEXUS version |
 | Tools | Screenshot, colour picker, show shortcuts, restart the bar |
 | Power | Lock, sleep, restart, shut down, log out |
@@ -236,28 +238,47 @@ Pick one with **Super + Shift + Ctrl + Space** or NEXUS menu › Style › Theme
 
 Command-line version (works now): `nexus-theme list` shows themes, `nexus-theme set tokyo-night` switches.
 
-## 13. Apps and the Install menu (coming in phase 4)
+## 13. Apps
 
-**Preinstalled:**
+No apps come in the image. **`nexus-apps`** installs the ones you want, straight from Debian or from each app's own official releases. It opens by itself after your first unlock, and any time from **NEXUS menu › Install apps** (or type `nexus-apps` in a terminal).
+
+**Using the picker:**
+
+| You see | Means | Choosing it |
+| --- | --- | --- |
+| `▶ Go: install 3, remove 1` | | Does it: a terminal opens, asks your password, shows progress |
+| `✕ Cancel` | | Closes without changes |
+| `[x] Chromium · web browser` | Will be installed | Unticks it |
+| `[ ] KiCad · circuit board design` | Not installed | Ticks it |
+| `[✓] installed  VS Code` | Already installed | Marks it for removal |
+| `[–] will be removed  VS Code` | Will be removed | Keeps it |
+
+When it finishes, a notification lists what's ready (or what wasn't done and why; the terminal shows the details).
+
+**Ticked the first time:**
 
 | For | App |
 | --- | --- |
 | Web | Chromium |
 | Code | VS Code |
-| Games you make | Godot 4 |
-| Pico | Thonny, mpremote, picotool |
-| Python | python3, pip, venv, pipx |
-| Minecraft | Prism Launcher (Java 21) |
-| Retro games | ES-DE + RetroArch |
+| Pico | mpremote, picotool |
+| Python | pip, venv, pipx |
 | VPN to home | Tailscale |
-| Remote shell | SSH (server off until you switch it on) |
-| AI | Iris (your desktop companion app) |
 | Terminal tools | btop, fastfetch, lazygit, git, ripgrep, fd, bat, fzf |
-| Everyday | Thunar (files), imv (pictures), mpv (video, music), Evince (PDF), Mousepad (notes), Calculator |
+| Everyday | imv (pictures), mpv (video, music), Evince (PDF), Mousepad (notes), Calculator |
+| Remote shell | SSH server (installed switched off) |
 
-**Install menu** (NEXUS menu › Install): KiCad, Arduino IDE 2 (PC only), Bambu Studio (PC only), LibreOffice, FreeTube, Legcord (Discord), Remmina, Timeshift, a Samba share for your ROMs folder. One tap installs; tap again to remove. A terminal window shows the progress.
+**Extras you can tick:** Godot 4, Thonny, Prism Launcher (Minecraft, with Java 21), RetroArch, ES-DE, Iris, KiCad, Arduino IDE 2 (PC only), Bambu Studio (PC only), LibreOffice, FreeTube, Legcord (Discord), Remmina, Timeshift, ROMs share (Samba).
 
-**Minecraft:** open Prism Launcher, sign in with your Microsoft account, make a Fabric instance with the same version as your server, then Add Server.
+**Good to know:**
+
+- It needs internet. With none at first login, a notification says so and the list appears at the next login.
+- `mpremote` (installed with pipx) works after you log out and back in once.
+- Apps from GitHub/GitLab are always the newest release. Their files are checked against the fingerprint the project publishes, when it publishes one.
+- PC-only apps don't appear on the deck.
+- Thunar (files) and the terminal are part of the desktop, so they're always there.
+
+**Minecraft:** install Prism Launcher, open it, sign in with your Microsoft account, make a Fabric instance with the same version as your server, then Add Server.
 
 ## 14. Iris (AI) (coming in phase 4 and 7)
 

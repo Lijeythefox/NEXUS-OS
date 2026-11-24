@@ -84,6 +84,11 @@ pkgs="$(nexus-apps --arch amd64 apt-packages)"
 echo "$pkgs"
 if ! apt-get install -s --no-install-recommends $pkgs >"$OUT/apps-apt.log" 2>&1; then
 	grep -E '^E:|Unable|has no installation candidate' "$OUT/apps-apt.log" | head -20
+	# Show what Debian does have with a similar name, to make fixing apps.conf quick.
+	for missing in $(grep -oP "Unable to locate package \K\S+" "$OUT/apps-apt.log"); do
+		echo "Similar to $missing:"
+		apt-cache search --names-only "^$(echo "$missing" | cut -d- -f1)" | head -40 | sed 's/^/   /'
+	done
 	apps=FAILED
 fi
 result "APPS_LIST=$apps"

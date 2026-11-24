@@ -61,7 +61,8 @@ Short, plain, present tense, saying what changed for the user: `menu: add Wi-Fi 
 
 | You're adding | Put it in |
 | --- | --- |
-| A Debian package | `config/packages.txt` (with a `# why` comment above its group) |
+| An app (anything that isn't part of the desktop itself) | `overlay/usr/share/nexus/apps.conf` (installed by `nexus-apps`, never in the image) |
+| A Debian package the desktop itself needs | `config/packages.txt` (with a `# why` comment above its group) |
 | A Hyprland-family package | `config/packages-backports.txt` |
 | A NEXUS command | `overlay/usr/local/bin/nexus-<name>` (bash or Python, `#!/bin/bash` or `#!/usr/bin/python3`, help text at the top) |
 | A shortcut | `overlay/usr/share/nexus/default/hypr/bindings.lua` **and** `overlay/usr/share/nexus/default/keys.txt` **and** the table in `SPEC.md` and `docs/USER-GUIDE.md` |
@@ -126,7 +127,7 @@ check "a clear sentence saying what should happen" example_does_the_thing
 2. Find the exact Debian 13 package name on <https://packages.debian.org/trixie/>.
 3. Add it to `config/packages.txt` in the right group with a short `# why` comment.
 4. Push. The desktop check installs the full list in a clean container; a wrong name or a conflict fails there in about 3 minutes instead of 2 hours into the build.
-5. Note the size: `apt-cache show <pkg> | grep Installed-Size`. Big packages may belong in the Install menu instead.
+5. Note the size: `apt-cache show <pkg> | grep Installed-Size`. If it's an app rather than part of the desktop, it belongs in `apps.conf` instead (recipe 5.9).
 
 ### 5.4 Add a themed config
 
@@ -150,6 +151,33 @@ Edit `overlay/usr/share/nexus/default/hypr/looknfeel.lua`. Values are in pixels 
 ### 5.7 Change what's switched off at boot
 
 `userpatches/customize-image.sh`, function `trim_services`. Measure before and after with `nexus-bench` on the device and record the numbers in `PROGRESS.md`.
+
+### 5.9 Add an app to the installer
+
+1. Open `overlay/usr/share/nexus/apps.conf`. The top of the file explains every setting.
+2. Add a section. Examples:
+   ```ini
+   [blender]
+   name = Blender
+   about = 3D modelling
+   default = no
+   apt = blender
+   ```
+   ```ini
+   [obsidian]
+   name = Obsidian
+   about = notes
+   default = no
+   github = obsidianmd/obsidian-releases
+   amd64_file = _amd64\.deb$
+   arm64_file = _arm64\.deb$
+   kind = deb
+   ```
+   Use `arch = amd64` for PC-only apps. `kind = appimage` and `kind = zip` also need `command = <name>`.
+3. Check it: `python3 overlay/usr/local/bin/nexus-apps --conf overlay/usr/share/nexus/apps.conf check`, and see what it would do: `... --arch amd64 plan --install blender`.
+4. For a download, see which file it would pick: `... --arch arm64 resolve obsidian`.
+5. Push. The GitHub check dry-runs every Debian package in the list.
+6. If it's one of Elijah's usual apps, set `default = yes` and update the test `apps_defaults_are_elijahs_list` in `ci/tests.sh`.
 
 ### 5.8 Add a board (phase 5)
 

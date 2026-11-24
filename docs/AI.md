@@ -125,8 +125,8 @@ The 16k context costs extra memory on top of the model (roughly 0.5–1 GB at th
 Iris's repo builds only a **Windows** installer today (`.github/workflows/build-windows.yml`). The code supports Linux and its fetch scripts already handle `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu`, so:
 
 1. **In the Iris repo (phase 4):** add `.github/workflows/build-linux.yml` that builds a `.deb` for **amd64** (OptiPlex) and **arm64** (deck), and attaches them to each Iris release.
-2. **In NEXUS:** `config/downloads.txt` pins the Iris `.deb` (version, amd64 link, arm64 link, SHA-256). The build installs it with its dependencies.
-3. **Updates:** NEXUS turns off Iris's own updater (it updates through the next NEXUS image or the Update menu), so the pinned, tested version is what runs.
+2. **In NEXUS:** Iris is an extra in the app installer (`overlay/usr/share/nexus/apps.conf`, entry `[iris]`, not ticked by default). `nexus-apps` downloads the newest Iris `.deb` for the machine from the Iris releases, checks its fingerprint and installs it with its dependencies. Until the Iris repo publishes Linux builds, the installer says it can't find one.
+3. **Updates:** Iris's own updater is turned off on NEXUS; reinstalling from the picker (or the Update menu, phase 2) gets the newest release.
 
 ### Extra packages Iris needs on NEXUS
 
@@ -144,7 +144,7 @@ The Debian package's own dependency list pulls most of these in; the GitHub chec
 
 ### Start-up and memory
 
-Iris starts with the desktop (after the lock screen), so the globe is there when you unlock. Its shell and helper are expected to use roughly 200–400 MB of memory, which is a large part of the idle budget (under 700 MB on the OptiPlex, under 600 MB on the deck). Phase 4 measures it with `nexus-bench`. If it doesn't fit, NEXUS menu › Setup › Iris gets a "Start Iris at login" switch (off on the deck), and Super + I starts it on demand.
+Once installed, Iris starts with the desktop (after the lock screen), so the globe is there when you unlock. Its shell and helper are expected to use roughly 200–400 MB of memory, which is a large part of the idle budget (under 700 MB on the OptiPlex, under 600 MB on the deck). Phase 4 measures it with `nexus-bench`. If it doesn't fit, NEXUS menu › Setup › Iris gets a "Start Iris at login" switch (off on the deck), and Super + I starts it on demand.
 
 ## 6. Licence
 

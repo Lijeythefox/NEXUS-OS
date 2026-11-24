@@ -14,7 +14,7 @@ The full plan for NEXUS OS 2, from the first smooth desktop to a finished cyberd
 | 1 | Smooth desktop | OptiPlex | none | **Built, needs device test** |
 | 2 | NEXUS menu | OptiPlex | 1 | Not started |
 | 3 | Themes | OptiPlex | 2 | Not started |
-| 4 | Apps (and the Iris app) | OptiPlex | 2 | Not started |
+| 4 | Apps (and the Iris app) | OptiPlex | 2 | Installer built early; rest not started |
 | 5 | Deck board: choose and bring up | Deck board on a desk | 1–4, board bought | Not started |
 | 6 | Deck hardware features | Cyberdeck | 5, case built | Not started |
 | 7 | Offline AI on the deck | Cyberdeck | 4, 5 | Not started |
@@ -181,57 +181,52 @@ The **Install** section of the menu comes in phase 4 (it needs the app lists).
 
 ---
 
-## Phase 4: Apps and the Iris app (L)
+## Phase 4: Apps and the Iris app (M)
 
-**Goal:** every preinstalled app from the SPEC, the one-tap Install menu, and the Iris desktop companion running on Hyprland with the home PC as a brain. SPEC sections: *Apps*, *Iris (AI)*, and [AI.md](AI.md).
+**Goal:** every app in `apps.conf` installs and works through `nexus-apps`, and the Iris desktop companion runs on Hyprland with the home PC as a brain. SPEC sections: *Apps*, *Iris (AI)*, and [AI.md](AI.md).
 
-### How apps arrive
-
-| Kind | Example | How it gets in the image |
-| --- | --- | --- |
-| Debian package | Thonny, mpv, btop | `config/packages.txt` |
-| Vendor repo | VS Code, Tailscale | repo + key added in `customize-image.sh`, package in a new `config/packages-vendor.txt` |
-| Pinned download | Godot 4, Prism Launcher, ES-DE, RetroArch cores | `config/downloads.txt` (name, version, amd64 link, arm64 link, SHA-256), fetched during the build by `tools/fetch-downloads.sh`, checked against the SHA-256 |
-| Install menu | KiCad, LibreOffice… | `config/install-menu.txt`; installed on demand by `nexus-install` |
+**Already done early (25 Nov 2026):** the installer itself. `nexus-apps` (`overlay/usr/local/bin/nexus-apps`), the list (`overlay/usr/share/nexus/apps.conf`), the first-login picker, the menu entry, 16 tests, and a GitHub check that every Debian package in the list exists and that a Debian app, a zip download and an AppImage download really install. Apps are never in the image (decision D-25).
 
 ### Tasks
 
 | # | Task | Files | Size |
 | --- | --- | --- | --- |
-| 4.1 | Download fetcher with SHA-256 check; build fails on a mismatch. Test: good file, bad checksum, missing arm64 link | `tools/fetch-downloads.sh`, `config/downloads.txt` | M |
-| 4.2 | Debian apps: Chromium (Wayland), Thonny, mpremote, picotool, python3-venv, pipx, Java 21, RetroArch, btop, fastfetch, lazygit, git, ripgrep, fd-find, bat, fzf, imv, mpv, Evince, Mousepad, gnome-calculator, openssh | `config/packages.txt` | S |
-| 4.3 | VS Code (Microsoft repo) and Tailscale (Tailscale repo) | `customize-image.sh`, `config/packages-vendor.txt` | M |
-| 4.4 | Godot 4, Prism Launcher, ES-DE, RetroArch cores as pinned downloads, with `.desktop` launchers and icons | `config/downloads.txt`, `overlay/usr/share/applications/` | M |
-| 4.5 | `nexus-open` uses the real apps (browser, code, games); shortcuts no longer show "phase 4" | `nexus-open` | S |
-| 4.6 | Install menu: `nexus-install` reads `config/install-menu.txt`, shows only apps for this machine, installs/removes with progress in a terminal. Tests: list filtering by architecture | `nexus-install`, menu file | M |
-| 4.7a | **In the Iris repo:** add `.github/workflows/build-linux.yml` building `.deb` packages for amd64 and arm64 and attaching them to each Iris release; release Iris with them | `Lijeythefox/IRIS` | M |
-| 4.7b | Install the pinned Iris `.deb` from `config/downloads.txt`; packages it needs (WebKitGTK, appindicator, `gnome-keyring`, `libsecret-tools`, `libasound2`, `xdg-utils`); Iris's updater off. Desktop check installs it | `config/downloads.txt`, `config/packages.txt` | M |
-| 4.7c | Hyprland setup: window rules for Iris's overlay and panel (class names read from `hyprctl clients` on the device, pinned in a test); keys Super + I / Shift + I / Alt + I / Ctrl + I → `roamies --ask/--talk/--panel/--list`; Waybar `tray` module; start Iris from `nexus-autostart` after the lock | `rules.lua`, `bindings.lua`, `keys.txt`, `waybar/config.json`, `nexus-autostart` | M |
+| 4.1 | Device-test the installer on the OptiPlex: first-login picker, every ticked app, every extra | `apps.conf` fixes as found | M |
+| 4.2 | Check every app opens from the launcher with a proper icon; fix desktop entries if not | `nexus-apps` | S |
+| 4.3 | Chromium in Wayland mode by default (`/etc/chromium.d/nexus` flags) | overlay file, added to the `chromium` entry | S |
+| 4.4 | `nexus-open` picks the installed apps (already points to the installer when missing) | `nexus-open` | S |
+| 4.5 | ES-DE finds RetroArch and the ROMs folder | ES-DE settings in `apps.conf` setup step | S |
+| 4.6 | SSH server switch in the menu | `nexus-ssh` | S |
+| 4.7a | **In the Iris repo:** add `.github/workflows/build-linux.yml` building `.deb` packages for amd64 and arm64 and attaching them to each Iris release | `Lijeythefox/IRIS` | M |
+| 4.7b | Iris entry in `apps.conf` installs that `.deb` plus what it needs (`gnome-keyring`, `libsecret-tools`); Iris's own updater off | `apps.conf` | S |
+| 4.7c | Hyprland setup: window rules for Iris's overlay and panel (class names read from `hyprctl clients` on the device, pinned in a test); keys Super + I / Shift + I / Alt + I / Ctrl + I → `roamies --ask/--talk/--panel/--list`; Waybar `tray` module; start Iris from `nexus-autostart` when installed | `rules.lua`, `bindings.lua`, `keys.txt`, `waybar/config.json`, `nexus-autostart` | M |
 | 4.7d | NEXUS menu › Setup › Iris: add the home PC's Ollama (`http://<name>:11434`) to Iris's server list, test the connection, "Start Iris at login" switch | `nexus-iris-setup`, menu file | S |
 | 4.7e | Measure Iris's idle memory with `nexus-bench`; decide the login default | `PROGRESS.md` | S |
-| 4.8 | SSH server switch in the menu (off by default) | `nexus-ssh` | S |
-| 4.9 | Image size check: the build fails if the image grows past a set limit (stops surprises) | `build.yml` | S |
-| 4.10 | Docs: apps chapter, Install menu, Iris setup | `USER-GUIDE.md`, `AI.md` | S |
+| 4.8 | Image size check: the build fails if the image grows past a set limit | `build.yml` | S |
+| 4.9 | Docs: apps chapter, Iris setup | `USER-GUIDE.md`, `AI.md` | S |
 
 ### Device checklist
 
-- [ ] Every app in the SPEC's Preinstalled table opens from the launcher.
-- [ ] Super + Shift + B / C, Super + G open Chromium, VS Code, ES-DE.
+- [ ] After the first unlock (with internet), the app picker appears with your usual apps ticked.
+- [ ] Go opens a terminal, asks for your password, installs, and a notification says what's ready.
+- [ ] Every ticked app opens from the launcher (Super + Space).
+- [ ] Super + Shift + B / C open Chromium and VS Code.
+- [ ] NEXUS menu › Install apps: install Godot, Prism Launcher, Thonny, RetroArch and ES-DE; each opens. Remove one; it's gone.
 - [ ] Minecraft (Prism) starts and you can join the Fabric server.
-- [ ] A Pico shows up in Thonny; `mpremote` runs a file.
-- [ ] Godot opens a project and runs it.
-- [ ] Install menu: install and remove KiCad.
-- [ ] Iris's globe appears after unlocking; Super + I and Super + Shift + I work; it answers from a sign-in and from the home PC's Ollama (at home and through Tailscale). Full list: [AI.md § 7](AI.md#7-phase-checklists).
-- [ ] `nexus-bench` idle memory still under 700 MB (apps aren't started at login).
+- [ ] A Pico shows up in Thonny; `mpremote` runs a file (after logging out and in once).
+- [ ] With no internet at first login: a notification says to connect, and the picker appears at the next login.
+- [ ] Iris's globe appears after unlocking; Super + I and Super + Shift + I work; it answers from a sign-in and from the home PC's Ollama. Full list: [AI.md § 7](AI.md#7-phase-checklists).
+- [ ] `nexus-bench` idle memory still under 700 MB.
 
 ### Risks
 
 | Risk | Plan |
 | --- | --- |
-| Image gets big (Chromium, VS Code, Godot, Iris's WebKitGTK) | Size limit check (4.9); move rarely used apps to the Install menu |
+| A project renames its release files, so the pattern stops matching | The installer says which app and where it looked; fix the pattern in `apps.conf` (no image rebuild needed if fixed on the device) |
+| Some projects publish no fingerprint (GitLab, older GitHub files) | Downloaded over HTTPS only; the log says so (D-26) |
 | Iris uses too much idle memory | Measure (4.7e); "Start Iris at login" switch, Super + I starts it on demand |
 | Iris's overlay misbehaves under Hyprland (focus, stacking, transparency) | Window rules; fixes made in the Iris repo; needs device test |
-| Some downloads have no arm64 build | `downloads.txt` marks them; the Install menu hides them on ARM (SPEC already lists Arduino IDE and Bambu Studio as PC only) |
+| A Debian package name is wrong | The GitHub check dry-runs every Debian package in the list on each push |
 
 ---
 

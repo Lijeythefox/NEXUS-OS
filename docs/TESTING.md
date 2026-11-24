@@ -27,13 +27,14 @@ Run it yourself from the repo root (needs Linux or a container): `bash ci/check-
 
 ### Unit tests (`ci/tests.sh`)
 
-Phase 1 has 18 tests covering:
+There are 34 tests covering:
 
 | Area | What's tested |
 | --- | --- |
 | `nexus-theme` (6) | Every template fills with no `{{` left; unknown placeholder fails and names it; `#rrggbb` / `rrggbb` / `r, g, b` forms; a bad colour is refused; `ensure` renders the default theme on first run; `ensure` keeps the saved theme |
 | `nexus-session` (4) | Gives up after 3 fast failures and shows the log path; a long run resets the count; output goes to `~/.cache/nexus/hyprland.log`; says so when Hyprland isn't installed |
 | `nexus-getty` (4) | Root while first-run setup is pending; the desktop user after; plain prompt when auto-login is off; never root once setup is done |
+| `nexus-apps` (16) | The real app list has no mistakes; unknown settings and empty apps refused; PC-only apps hidden and refused on ARM; Elijah's ticked list; installed marks; one apt call without recommended extras; repositories added first; SSH switched off; pipx as the user; unknown app named; right release file per machine; test releases skipped; missing file names the app; wrong fingerprint refused and deleted |
 | `nexus-ws-state` (4) | Active, occupied, empty; valid output when Hyprland doesn't answer |
 
 How to write one: [DEVELOPER-GUIDE.md § 4](DEVELOPER-GUIDE.md#4-writing-tests).
@@ -48,6 +49,8 @@ Job **desktop** in `check.yml`. Runs `ci/desktop-check.sh` in a clean `debian:tr
 4. **Self-test:** runs the same check on a deliberately broken config and makes sure it *fails*, so a check that always passes can't slip through.
 5. `foot --check-config` and `fuzzel --check-config` on the rendered theme files.
 6. Checks every command the desktop needs exists (waybar, mako, swayosd-server and -client, swaybg, hyprlock, hypridle, grim, slurp, wl-copy, notify-send, brightnessctl, playerctl, thunar, start-hyprland, hyprctl, Xwayland, wpctl, nmcli, jq, pkill).
+
+7. **App installer:** `nexus-apps check` on the real list, then a dry run (`apt-get install -s`) of every Debian package in it, so a wrong name fails the check. Then it really installs terminal tools, Godot (zip) and Prism Launcher (AppImage) to prove the install paths work; that part depends on GitHub, so a failure is reported but doesn't block.
 
 What it **can't** check: whether the desktop actually draws, animations, real hardware. That's layers 3 to 5. (A screenless desktop run in the check was tried and dropped; see [DECISIONS.md](DECISIONS.md) D-05.)
 

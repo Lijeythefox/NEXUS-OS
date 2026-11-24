@@ -206,7 +206,7 @@ Thunar (files) and foot (terminal) are part of the desktop, so they are in the i
 | Godot 4 | GitHub release (zip) | All |
 | Thonny | Debian | All |
 | Prism Launcher + Java 21 (Minecraft) | GitHub release (AppImage) + Debian | All |
-| RetroArch + cores (NES, SNES, Game Boy, Mega Drive) | Debian | All |
+| RetroArch + cores (NES, SNES, Game Boy, Game Boy Advance, DS; Debian has no Mega Drive core) | Debian | All |
 | ES-DE (game menu) | GitLab release (AppImage) | All |
 | Iris (AI desktop companion) | GitHub release (`.deb`) | All (once the Iris repo publishes Linux builds) |
 | KiCad | Debian | All |

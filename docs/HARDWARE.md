@@ -61,8 +61,8 @@ This is the biggest open hardware decision. It blocks phase 5. It must be made (
 | --- | --- | --- |
 | Run Hyprland smoothly at 1024×600 | The whole point of NEXUS | A GPU with a good open-source Mesa driver |
 | Armbian support | NEXUS is built with Armbian | Board listed as supported (or community-maintained with a working `current` kernel) |
-| **Offline AI** (Elijah's choice) | Iris must work with no internet | Runs a 1–3 billion parameter model at **5+ words a second** |
-| RAM | Desktop + browser + AI model at once | **8 GB** (16 GB is better with AI) |
+| **Offline AI** (Elijah's choice) | The Iris app must work with no internet (Lite mode, see [AI.md § 4](AI.md#4-offline-iris-on-the-deck-phase-7)) | Runs a 3–4 billion parameter tool-using model with 16k context at **5+ words a second** |
+| RAM | Desktop + browser + the Iris app + an AI model at once | **8 GB** minimum, **16 GB recommended** |
 | Wi-Fi + Bluetooth | Network, controllers | Built in, or a small USB adapter |
 | USB | Keyboard, trackball, touch, Pico, hub | 3+ ports, or one hub |
 | Power | Battery life | As low as the AI need allows |

@@ -14,7 +14,7 @@ The full plan for NEXUS OS 2, from the first smooth desktop to a finished cyberd
 | 1 | Smooth desktop | OptiPlex | none | **Built, needs device test** |
 | 2 | NEXUS menu | OptiPlex | 1 | Not started |
 | 3 | Themes | OptiPlex | 2 | Not started |
-| 4 | Apps (and Iris through the home PC) | OptiPlex | 2 | Not started |
+| 4 | Apps (and the Iris app) | OptiPlex | 2 | Not started |
 | 5 | Deck board: choose and bring up | Deck board on a desk | 1–4, board bought | Not started |
 | 6 | Deck hardware features | Cyberdeck | 5, case built | Not started |
 | 7 | Offline AI on the deck | Cyberdeck | 4, 5 | Not started |
@@ -181,9 +181,9 @@ The **Install** section of the menu comes in phase 4 (it needs the app lists).
 
 ---
 
-## Phase 4: Apps and Iris through the home PC (L)
+## Phase 4: Apps and the Iris app (L)
 
-**Goal:** every preinstalled app from the SPEC, the one-tap Install menu, and Iris reaching Open WebUI on the home PC. SPEC sections: *Apps*, and [AI.md](AI.md) stage 1.
+**Goal:** every preinstalled app from the SPEC, the one-tap Install menu, and the Iris desktop companion running on Hyprland with the home PC as a brain. SPEC sections: *Apps*, *Iris (AI)*, and [AI.md](AI.md).
 
 ### How apps arrive
 
@@ -204,7 +204,11 @@ The **Install** section of the menu comes in phase 4 (it needs the app lists).
 | 4.4 | Godot 4, Prism Launcher, ES-DE, RetroArch cores as pinned downloads, with `.desktop` launchers and icons | `config/downloads.txt`, `overlay/usr/share/applications/` | M |
 | 4.5 | `nexus-open` uses the real apps (browser, code, games); shortcuts no longer show "phase 4" | `nexus-open` | S |
 | 4.6 | Install menu: `nexus-install` reads `config/install-menu.txt`, shows only apps for this machine, installs/removes with progress in a terminal. Tests: list filtering by architecture | `nexus-install`, menu file | M |
-| 4.7 | Iris stage 1: `nexus-iris` opens Open WebUI on the home PC in a Chromium app window; address set in the menu (Setup › Iris); clear message if the PC can't be reached | `nexus-iris`, see [AI.md](AI.md) | M |
+| 4.7a | **In the Iris repo:** add `.github/workflows/build-linux.yml` building `.deb` packages for amd64 and arm64 and attaching them to each Iris release; release Iris with them | `Lijeythefox/IRIS` | M |
+| 4.7b | Install the pinned Iris `.deb` from `config/downloads.txt`; packages it needs (WebKitGTK, appindicator, `gnome-keyring`, `libsecret-tools`, `libasound2`, `xdg-utils`); Iris's updater off. Desktop check installs it | `config/downloads.txt`, `config/packages.txt` | M |
+| 4.7c | Hyprland setup: window rules for Iris's overlay and panel (class names read from `hyprctl clients` on the device, pinned in a test); keys Super + I / Shift + I / Alt + I / Ctrl + I → `roamies --ask/--talk/--panel/--list`; Waybar `tray` module; start Iris from `nexus-autostart` after the lock | `rules.lua`, `bindings.lua`, `keys.txt`, `waybar/config.json`, `nexus-autostart` | M |
+| 4.7d | NEXUS menu › Setup › Iris: add the home PC's Ollama (`http://<name>:11434`) to Iris's server list, test the connection, "Start Iris at login" switch | `nexus-iris-setup`, menu file | S |
+| 4.7e | Measure Iris's idle memory with `nexus-bench`; decide the login default | `PROGRESS.md` | S |
 | 4.8 | SSH server switch in the menu (off by default) | `nexus-ssh` | S |
 | 4.9 | Image size check: the build fails if the image grows past a set limit (stops surprises) | `build.yml` | S |
 | 4.10 | Docs: apps chapter, Install menu, Iris setup | `USER-GUIDE.md`, `AI.md` | S |
@@ -217,14 +221,16 @@ The **Install** section of the menu comes in phase 4 (it needs the app lists).
 - [ ] A Pico shows up in Thonny; `mpremote` runs a file.
 - [ ] Godot opens a project and runs it.
 - [ ] Install menu: install and remove KiCad.
-- [ ] Iris opens the home PC's Open WebUI (on the home network, and away through Tailscale).
+- [ ] Iris's globe appears after unlocking; Super + I and Super + Shift + I work; it answers from a sign-in and from the home PC's Ollama (at home and through Tailscale). Full list: [AI.md § 7](AI.md#7-phase-checklists).
 - [ ] `nexus-bench` idle memory still under 700 MB (apps aren't started at login).
 
 ### Risks
 
 | Risk | Plan |
 | --- | --- |
-| Image gets big (Chromium, VS Code, Godot) | Size limit check (4.9); move rarely used apps to the Install menu |
+| Image gets big (Chromium, VS Code, Godot, Iris's WebKitGTK) | Size limit check (4.9); move rarely used apps to the Install menu |
+| Iris uses too much idle memory | Measure (4.7e); "Start Iris at login" switch, Super + I starts it on demand |
+| Iris's overlay misbehaves under Hyprland (focus, stacking, transparency) | Window rules; fixes made in the Iris repo; needs device test |
 | Some downloads have no arm64 build | `downloads.txt` marks them; the Install menu hides them on ARM (SPEC already lists Arduino IDE and Bambu Studio as PC only) |
 
 ---
@@ -296,23 +302,23 @@ Needs: the case printed and the parts fitted (see [HARDWARE.md](HARDWARE.md)).
 
 ## Phase 7: Offline AI on the deck (M–L)
 
-**Goal:** Iris keeps working with no internet by running a small model on the deck itself, and switches automatically between the home PC and the local model. Full design: [AI.md](AI.md) stage 2.
+**Goal:** the Iris app keeps working with no internet by using a small model running on the deck itself (Iris's Lite mode), and switches automatically between the home PC and the local model. Full design: [AI.md § 4](AI.md#4-offline-iris-on-the-deck-phase-7).
 
 ### Tasks
 
 | # | Task | Files | Size |
 | --- | --- | --- | --- |
-| 7.1 | Local model server: `llama.cpp`'s `llama-server` (or RKLLM on RK3588), as a user service that only starts when needed and stops after 10 idle minutes | `nexus-ai-server`, systemd user unit | M |
+| 7.1 | Local model server: `llama.cpp`'s `llama-server` on `127.0.0.1:8088` (OpenAI-compatible, so Iris can use it), at least 16k context, as a user service that only starts when needed and stops after 10 idle minutes. RKLLM only if llama.cpp is too slow | `nexus-ai-server`, systemd user unit | M |
 | 7.2 | Model download from the menu (Setup › Iris › Offline model) to `/mnt/sdcard/models/`, with size and SHA-256 shown; nothing preinstalled | `nexus-ai-models`, `config/ai-models.txt` | M |
-| 7.3 | Automatic choice: home PC if reachable within 2 s, otherwise local; the window title says which one is answering | `nexus-iris` | S |
-| 7.4 | Quick ask: Super + I opens a one-line prompt; answer appears as a notification with "Open in Iris" | `nexus-ask` | S |
+| 7.3 | Add "This deck" to Iris's server list with Lite mode on; `nexus-iris-brain` picks the home PC if it answers within 2 s, otherwise the deck's model, and shows a bar dot. If Iris's settings can't be changed safely from outside, make the change in the Iris repo instead | `nexus-iris-brain` | M |
+| 7.4 | Pick the default model by testing on the board (tool use, 16k context, 5+ words a second) | `config/ai-models.txt`, `DECISIONS.md` D-22 | S |
 | 7.5 | Limits: local AI refuses to start under 20 % battery and pauses when a game is fullscreen | `nexus-ai-server` | S |
 | 7.6 | Benchmark: `nexus-bench --ai` prints tokens per second for the installed model | `nexus-bench` | S |
 
 ### Device checklist
 
-- [ ] With Wi-Fi off, Super + I answers using the local model.
-- [ ] With the home PC reachable, Iris uses the PC.
+- [ ] With Wi-Fi off, Super + I gets an answer from the deck's own model (Lite mode).
+- [ ] At home, Iris switches back to the home PC by itself.
 - [ ] Local model speed at least 5 words a second (target from AI.md).
 - [ ] Desktop stays smooth while the model answers.
 - [ ] Server stops by itself after 10 idle minutes (memory goes back down).
@@ -362,7 +368,7 @@ Ideas from [`SPEC.md`](../SPEC.md) conversations that are out of scope for 2.0. 
 | Decision | Blocks | Where it's discussed |
 | --- | --- | --- |
 | Which deck board | Phase 5 | [HARDWARE.md](HARDWARE.md#3-choosing-the-deck-board) |
-| Iris address on the home PC (Tailscale name) | Phase 4.7 | [AI.md](AI.md) |
+| Home PC's Ollama address for Iris (Tailscale name) | Phase 4.7d | [AI.md](AI.md) |
 | Which offline model | Phase 7.2 | [AI.md](AI.md#which-model) |
 | Breadboard module switch, knob and pogo connector part numbers | Phase 6.7 | [HARDWARE.md](HARDWARE.md#4-breadboard-module) |
 | Keep `start-hyprland` or switch to `uwsm` | Nothing (can be any time) | [DECISIONS.md](DECISIONS.md) D-07 |

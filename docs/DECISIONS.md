@@ -26,9 +26,10 @@ Status: **Decided** (Elijah agreed) · **Provisional** (made while building, Eli
 | D-18 | Documentation lives in this repo | Decided |
 | D-19 | Case files kept under `docs/hardware/case/` | Provisional |
 | D-20 | Which deck board | **Open** |
-| D-21 | Iris address on the home PC | **Open** |
+| D-21 | Home PC's Ollama address for Iris | **Open** |
 | D-22 | Default offline model | **Open** |
 | D-23 | Home PC Windows Home or Pro (remote desktop choice) | **Open** |
+| D-24 | Iris on NEXUS is Elijah's Roamies-based Iris app | Decided |
 
 ---
 
@@ -115,7 +116,7 @@ Status: **Decided** (Elijah agreed) · **Provisional** (made while building, Eli
 ### D-16 Offline AI on the deck too
 
 - **Decided:** Elijah chose "small model on the deck too" (November 2026).
-- **Means:** Iris uses the home PC when reachable and a small local model otherwise ([AI.md](AI.md)). The deck board must be strong enough (RK3588 or Pi 5, see [HARDWARE.md § 3](HARDWARE.md#3-choosing-the-deck-board)); the Radxa Zero 3W is ruled out for this.
+- **Means:** Iris uses the home PC when reachable and a small local model otherwise ([AI.md](AI.md); how it's done changed with D-24). The deck board must be strong enough (RK3588 or Pi 5, see [HARDWARE.md § 3](HARDWARE.md#3-choosing-the-deck-board)); the Radxa Zero 3W is ruled out for this.
 
 ### D-17 Eight phases
 
@@ -134,6 +135,16 @@ Status: **Decided** (Elijah agreed) · **Provisional** (made while building, Eli
 | # | Question | Needed by | Options |
 | --- | --- | --- | --- |
 | D-20 | Deck board | Phase 5 | RK3588 board (recommended) · Raspberry Pi 5 · Pi 5 + AI HAT+ 2 |
-| D-21 | Open WebUI address/port on the home PC | Phase 4.7 | Tailscale name + port |
-| D-22 | Default offline model | Phase 7.2 | Chosen by testing on the board (see [AI.md](AI.md#which-model)) |
+| D-21 | Home PC's Ollama address for Iris | Phase 4.7d | Tailscale name, port 11434 |
+| D-22 | Default offline model | Phase 7.4 | Chosen by testing on the board: tool use, 16k context, 5+ words a second (see [AI.md](AI.md#which-model)) |
 | D-23 | Home PC Windows edition | Only if remote desktop is installed | Home → RustDesk · Pro → Remmina (RDP) |
+
+### D-24 Iris on NEXUS is the Roamies-based Iris app
+
+- **Decided:** 25 Nov 2026, Elijah: *"actually lets make the ai the roamies iris clone"*.
+- **Means:** NEXUS ships Elijah's Iris desktop companion ([Lijeythefox/IRIS](https://github.com/Lijeythefox/IRIS), built on Roamies, AGPL-3.0) instead of opening Open WebUI in a browser window. Iris already supports Linux and Wayland (through XWayland), several brains (online sign-in, API keys, Ollama, any OpenAI-compatible server) and a Lite mode for small local models.
+- **What NEXUS adds:** a Linux build of Iris (new workflow in the Iris repo), Hyprland window rules and key bindings (Wayland gives apps no global shortcuts, so Hyprland calls `roamies --ask/--talk/--panel/--list`), a tray, a keyring, the home PC as a server, and on the deck a local `llama-server` plus a brain switch.
+- **Changes from D-16:** offline AI on the deck stays, but runs through Iris's Lite mode, which needs a tool-using model with at least 16k context (about 3–4B parameters). That makes **16 GB** the recommended deck RAM.
+- **Costs:** WebKitGTK adds roughly 100 MB to the image; Iris's idle memory must fit the speed targets (measured in phase 4); clicking inside other apps isn't possible on Wayland; spoken replies need an online voice service.
+- **Replaces:** the Open WebUI app-window plan in the first version of `docs/AI.md`.
+

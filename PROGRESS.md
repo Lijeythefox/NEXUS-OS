@@ -8,7 +8,11 @@ The old tactical version (XFCE, HUD, Settings app) and its progress notes are on
 
 Tested so far: only in the VMware VM and the browser simulator. **The OptiPlex test is next** (checklist below and in `docs/ROADMAP.md`).
 
-## Latest change (25 Nov 2026): full documentation and plan
+## Latest change (25 Nov 2026): Iris is the Roamies-based Iris app
+
+Docs only. The AI on NEXUS is now Elijah's own Iris desktop companion (`Lijeythefox/IRIS`), not Open WebUI in a browser window. Updated: `docs/AI.md` (rewritten), `SPEC.md` (Iris section, shortcuts Super + I / Shift + I / Alt + I / Ctrl + I, apps table), `docs/ROADMAP.md` (tasks 4.7a–e, phase 7), `docs/USER-GUIDE.md`, `docs/DECISIONS.md` (D-24), `docs/HARDWARE.md` (16 GB deck RAM recommended), glossary. Phase 4 includes a Linux build workflow in the Iris repo.
+
+## Earlier change (25 Nov 2026): full documentation and plan
 
 Docs only; no image change, so no new build.
 

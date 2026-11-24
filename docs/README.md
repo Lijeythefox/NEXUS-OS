@@ -21,7 +21,7 @@ Every document, what it is for, and who it is written for.
 | [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) | How to make changes: add a theme, an app, a shortcut, a command; tests; releases; working with Claude Code |
 | [TESTING.md](TESTING.md) | The four ways to test (GitHub check, browser simulator, VM, real hardware) and how to report a problem |
 | [HARDWARE.md](HARDWARE.md) | OptiPlex, the cyberdeck parts, choosing the deck board, breadboard module, Pico lid sensor |
-| [AI.md](AI.md) | How Iris (the AI assistant) works: home PC first, small model on the deck when offline |
+| [AI.md](AI.md) | Iris, your Roamies-based desktop companion, on NEXUS: Hyprland setup, brains (online, home PC, offline on the deck) |
 | [DECISIONS.md](DECISIONS.md) | Every important decision, why it was made, and what would change it |
 | [GLOSSARY.md](GLOSSARY.md) | Plain-words meanings of the technical terms used in these docs |
 | [../PROGRESS.md](../PROGRESS.md) | Where the project is right now |

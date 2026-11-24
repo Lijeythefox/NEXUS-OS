@@ -128,7 +128,10 @@ Switching slides the screen sideways.
 | Super + Shift + F | Files | Phase 1 |
 | Super + Shift + C | VS Code | Phase 4 |
 | Super + G | Games (ES-DE) | Phase 4 |
-| Super + I | Ask Iris a quick question | Phase 7 |
+| Super + I | Ask Iris (type) | Phase 4 |
+| Super + Shift + I | Talk to Iris | Phase 4 |
+| Super + Alt + I | Iris panel | Phase 4 |
+| Super + Ctrl + I | Iris to-do list | Phase 4 |
 | Super + W | Close window | Phase 1 |
 | Super + F | Fullscreen | Phase 1 |
 | Super + V | Float / unfloat window | Phase 1 |
@@ -248,7 +251,7 @@ Command-line version (works now): `nexus-theme list` shows themes, `nexus-theme 
 | Retro games | ES-DE + RetroArch |
 | VPN to home | Tailscale |
 | Remote shell | SSH (server off until you switch it on) |
-| AI | Iris |
+| AI | Iris (your desktop companion app) |
 | Terminal tools | btop, fastfetch, lazygit, git, ripgrep, fd, bat, fzf |
 | Everyday | Thunar (files), imv (pictures), mpv (video, music), Evince (PDF), Mousepad (notes), Calculator |
 
@@ -258,13 +261,25 @@ Command-line version (works now): `nexus-theme list` shows themes, `nexus-theme 
 
 ## 14. Iris (AI) (coming in phase 4 and 7)
 
-Iris is your AI assistant. Full details: [AI.md](AI.md).
+Iris is your desktop companion: the amber globe from your Iris app, now built into NEXUS. It appears after you unlock. Full details: [AI.md](AI.md).
 
-- **Phase 4:** the Iris app opens Open WebUI from your home PC in its own window. Set the PC's address once in NEXUS menu › Setup › Iris. Works at home, and away from home through Tailscale.
-- **Phase 7 (deck):** when the home PC can't be reached, Iris uses a small model running on the deck itself, so it still works with no internet. The window title says which one is answering ("Iris · home PC" or "Iris · on this deck").
-- **Super + I:** a one-line question box. The answer pops up as a notification with an "Open in Iris" button.
+| Do this | To |
+| --- | --- |
+| Super + I | Type a question (a small box opens) |
+| Super + Shift + I | Talk to Iris (speak, it answers when you stop) |
+| Say "Hey Iris" | Talk hands-free (switch it on in Iris's panel) |
+| Super + Alt + I | Open Iris's panel (settings, model, voice) |
+| Super + Ctrl + I | Your to-do list |
 
-The offline model is downloaded from the menu onto the SD card. It is slower and less clever than the home PC; good for quick questions, code help and notes.
+Iris can keep reminders and your to-do list, remember things you tell it, open apps, files and websites ("open Thunar"), search the web, look at your screen ("what's this error?") and draw answers on cards beside you. On NEXUS it can't click inside other apps (Wayland doesn't allow that).
+
+**Choosing its brain** (Iris's panel › Model):
+
+- **Online:** sign in with Claude or ChatGPT, or paste an API key. Best answers.
+- **Home PC:** your PC's Ollama, at home or away through Tailscale. Set it up once in NEXUS menu › Setup › Iris.
+- **On the deck (phase 7):** a small model running on the deck itself, so Iris works with no internet. It runs in Iris's **Lite mode**: talk, reminders, to-do list, memory, opening things and web search, but no screen reading or drawing. The deck switches between the home PC and its own model by itself.
+
+The offline model is downloaded once from NEXUS menu › Setup › Iris › Offline model onto the SD card.
 
 ## 15. Deck features (coming in phase 6)
 

@@ -269,7 +269,7 @@ Only `config/board.conf` may name a board. From phase 5 this becomes `config/boa
                       │   └─ breadboard module: Pico 2 W +       │
                       │      helper chip ► BB bar chip, fuse     │
  micro SD ────────────┤ /mnt/sdcard  ROMs/ Files/ models/        │
-                      │ llama-server / RKLLM (on demand) ► Iris  │
+                      │ Iris app ◄ llama-server (on demand)      │
                       └──────────────────────────────────────────┘
 ```
 

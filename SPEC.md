@@ -10,7 +10,7 @@ NEXUS OS 2 is a fast, minimal, smooth Linux desktop in the style of Omarchy, fil
 - **Look:** clean and calm. Flat dark themes, soft rounded corners, thin borders, gaps between windows, one accent colour. No neon, no grids, no HUD.
 - **Speed first:** small install, few background services, fast boot straight to the lock screen.
 - **Machines:** Dell OptiPlex 3060 SFF now (`BOARD=uefi-x86`). The cyberdeck board later (chosen before phase 5; it must be able to run a small AI model, so an RK3588 board or a Raspberry Pi 5) by changing `config/board.conf`. Nothing may depend on one board except that file.
-- **Priorities, in order:** smooth everyday use, coding and making (Godot, Pico, Python), gaming (Minecraft, retro), Iris AI (home PC, plus a small offline model on the deck).
+- **Priorities, in order:** smooth everyday use, coding and making (Godot, Pico, Python), gaming (Minecraft, retro), Iris, Elijah's desktop companion app (online, home PC, or a small offline model on the deck).
 
 ## Base system and build pipeline
 
@@ -127,7 +127,10 @@ Omarchy-style. `Super` is the Windows key.
 | Super + Ctrl + Space | Next wallpaper |
 | Super + Shift + Ctrl + Space | Theme picker |
 | Super + Shift + K | On-screen keyboard |
-| Super + I | Ask Iris (quick question) |
+| Super + I | Ask Iris (type) |
+| Super + Shift + I | Talk to Iris |
+| Super + Alt + I | Iris panel |
+| Super + Ctrl + I | Iris to-do list |
 | Print | Screenshot of the whole screen |
 | Shift + Print | Screenshot of an area |
 | Volume / brightness keys | Change level, SwayOSD shows it |
@@ -184,7 +187,7 @@ How it works:
 | Retro games | ES-DE + RetroArch + cores | Official AppImage + Debian + libretro builds |
 | VPN | Tailscale | Tailscale's repo |
 | Remote shell | OpenSSH client and server (server off by default) | Debian |
-| AI | "Iris" shortcut: Open WebUI in a Chromium app window, address set in the NEXUS menu | Built in |
+| AI | Iris desktop companion (see Iris section) | Iris repo's Linux `.deb`, pinned in `downloads.txt` |
 | Terminal tools | btop, fastfetch, lazygit, git, ripgrep, fd-find, bat, fzf, curl | Debian |
 | Everyday | Thunar, imv (pictures), mpv (video and music), Evince (PDF), Mousepad (notes), gnome-calculator | Debian |
 
@@ -204,14 +207,14 @@ How it works:
 
 ## Iris (AI)
 
-Iris is Elijah's AI assistant. Full design: `docs/AI.md`.
+The AI on NEXUS OS is **Iris**, Elijah's own desktop companion app ([Lijeythefox/IRIS](https://github.com/Lijeythefox/IRIS), a Roamies-based Tauri app, AGPL-3.0): an amber globe that lives on the screen, talks back, keeps reminders and to-do lists, draws answers beside what you're reading, and opens apps and files. NEXUS ships the Iris app and sets it up for Hyprland; it doesn't build a separate AI app. Full design: `docs/AI.md`.
 
-- **Home PC:** the Iris app opens Open WebUI from the home PC in a Chromium app window. Address set in NEXUS menu > Setup > Iris. Reaches the PC from anywhere through Tailscale. (Phase 4.)
-- **Offline on the deck:** a small language model (1 to 3 billion parameters, 4-bit) runs on the deck through `llama.cpp` (or RKLLM on an RK3588 NPU) when the home PC can't be reached. Models are downloaded from the menu to the SD card (`/mnt/sdcard/models/`), never put in the image. (Phase 7.)
-- **Automatic choice:** home PC if it answers within 2 seconds, otherwise the deck's model. The window title says which one is answering.
-- **Quick ask:** Super + I opens a one-line question box; the answer appears as a notification with "Open in Iris".
-- **Limits:** the local model server only starts when asked, stops after 10 idle minutes, refuses to start under 20 % battery, pauses while a game is fullscreen, and only listens on the deck itself (`127.0.0.1`).
-- **Target:** at least 5 words a second from the local model, with the desktop staying smooth.
+- **The app:** a pinned Iris `.deb` (amd64 and arm64, built by a Linux workflow in the Iris repo) installed from `config/downloads.txt`. Starts with the desktop after the lock screen. Its own updater is off; it updates with NEXUS.
+- **Hyprland setup:** Iris runs through XWayland (its own Linux code does this). Window rules keep its transparent overlay floating, pinned, unfocused and free of borders, blur, shadows and animations. Wayland doesn't give apps global shortcuts, so Hyprland binds Iris's built-in commands: Super + I = `roamies --ask` (type), Super + Shift + I = `roamies --talk` (speak), Super + Alt + I = `roamies --panel`, Super + Ctrl + I = `roamies --list`. "Hey Iris" works if switched on in Iris. Screenshots go through `xdg-desktop-portal-hyprland`. Waybar gets a tray. Sign-ins and keys are stored with `gnome-keyring` and `secret-tool`.
+- **Brains (picked in Iris's panel):** online sign-in (Claude, ChatGPT) or an API key; the **home PC's Ollama** over home Wi-Fi or Tailscale (added from NEXUS menu > Setup > Iris); and, on the deck, a **local model** in Iris's Lite mode.
+- **Offline on the deck (phase 7):** `llama-server` (llama.cpp) on `127.0.0.1:8088`, OpenAI-compatible, added to Iris's server list. A small tool-using model (about 3 to 4 billion parameters, 4-bit, at least 16k context, as Iris's Lite mode requires) downloaded from the menu to the SD card (`/mnt/sdcard/models/`), never put in the image. `nexus-iris-brain` switches Iris to the home PC when it answers within 2 seconds, otherwise to the deck's model.
+- **Limits:** the local model server only starts when asked, stops after 10 idle minutes, refuses to start under 20 % battery, pauses while a game is fullscreen, and only listens on the deck itself.
+- **Targets:** at least 5 words a second from the local model with the desktop staying smooth; Iris's idle memory measured in phase 4 and kept inside the speed targets (if it can't be, "Start Iris at login" becomes a switch, off on the deck).
 
 ## Speed targets
 
@@ -287,10 +290,10 @@ Only one phase at a time. The next starts after Elijah confirms the current one 
 1. **Smooth desktop on the OptiPlex.** Remove `prototype/`, rework the workflow (build check + image build with `BUILD_DESKTOP=no`), backports set up, Hyprland + auto-login + hyprlock, Waybar, fuzzel, mako, SwayOSD, foot, Thunar, Tokyo Night hard-wired through the template system, all shortcuts, animations, service trimming, `nexus-bench`. Update `CLAUDE.md` to match this spec.
 2. **NEXUS menu.** All sections except Install, plus `nexus-wifi`, `nexus-bluetooth`, power menu, screenshots, idle settings.
 3. **Themes.** All six themes, generated wallpapers, theme picker, live switching, low-effects mode switch.
-4. **Apps.** Everything in the Preinstalled table, then the Install menu, and Iris through the home PC.
+4. **Apps.** Everything in the Preinstalled table (including the Iris app with its Hyprland setup and the home PC brain), then the Install menu.
 5. **Deck board.** Choose and buy the board (must run a small AI model), add it as a second build target, bring the desktop up on it with the Waveshare screen, automatic low-effects mode.
 6. **Deck hardware.** Touch swipes, on-screen keyboard, controller mouse mode, Pico lid/battery, SD card setup, module slots and the breadboard module (pop-up, `BB` bar chip, over-current warning).
-7. **Offline AI.** Local model server, model downloads, automatic home-PC/local choice, Super + I quick ask.
+7. **Offline AI.** Local model server for Iris's Lite mode, model downloads, automatic home-PC/local brain switch.
 8. **Polish and speed pass.** Measure against the speed targets on both machines and fix the slow parts, image size, Plymouth splash, Minecraft and emulator tuning, first-boot welcome, the v2.0 release.
 
 ## Known risks
@@ -310,7 +313,7 @@ Only one phase at a time. The next starts after Elijah confirms the current one 
 Tracked with their options in `docs/DECISIONS.md`.
 
 - [ ] Deck board: an RK3588 board (recommended) or a Raspberry Pi 5 (with or without the AI HAT+ 2). Needed before phase 5
-- [ ] Iris / Open WebUI address on the home PC. Needed for phase 4
+- [ ] Home PC's Ollama address for Iris (Tailscale name). Needed for phase 4
 - [ ] Default offline AI model. Chosen by testing in phase 7
 - [ ] Home PC Windows Home or Pro (Remmina vs RustDesk, only if remote desktop is installed)
 - [ ] Keep `start-hyprland` (built in phase 1) or switch the session start to `uwsm` as written above

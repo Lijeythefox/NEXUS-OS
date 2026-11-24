@@ -28,7 +28,7 @@ Plain-word meanings of the terms used in the NEXUS docs.
 | **hypridle** | Watches for no activity and dims, locks and turns off the screen |
 | **hyprlock** | The lock screen |
 | **Image (`.img.xz`)** | The whole operating system packed into one compressed file, ready to write to a USB stick or SD card |
-| **Iris** | Elijah's AI assistant |
+| **Iris** | Elijah's AI desktop companion app (an amber globe on the screen), built on Roamies |
 | **llama.cpp** | A program that runs language models on ordinary processors; used for offline Iris |
 | **Low-effects mode** | A NEXUS setting with no blur or shadows and shorter animations, for weaker graphics chips |
 | **Lua** | A small programming language. Hyprland's settings files are written in it |
@@ -36,13 +36,15 @@ Plain-word meanings of the terms used in the NEXUS docs.
 | **Mesa** | The open-source graphics drivers |
 | **Model (AI)** | The "brain" file of an AI. "1B" means about 1 billion parameters; bigger is smarter but slower |
 | **NPU** | A chip made for running AI quickly with little power (the RK3588 has one) |
-| **Open WebUI** | The chat web page Iris runs in on the home PC |
+| **Ollama** | A program that runs AI models on the home PC; Iris can use it as its brain |
+| **Lite mode** | Iris's lighter setup for small local models (talk, reminders, memory, opening things) |
 | **Overlay** | The `overlay/` folder: files copied straight into the image (`overlay/etc/x` becomes `/etc/x`) |
 | **Phase** | One stage of the roadmap. Only one is worked on at a time |
 | **Pico / Pico 2 W** | Raspberry Pi's small microcontroller boards. The 2 W has Wi-Fi |
 | **Pogo connector** | Spring-loaded pins that touch flat pads; with magnets, modules snap on and connect |
 | **Polkit agent** | The pop-up that asks for your password when something needs admin rights |
 | **Q4 / quantised** | An AI model squeezed to 4 bits per number so it's smaller and faster, with slightly lower quality |
+| **Roamies** | Ken Kai's open-source desktop companion app that Iris is built on |
 | **Rail (breadboard)** | The long strips along the edges for power (+) and ground (−) |
 | **RKLLM** | Rockchip's software for running language models on the RK3588's NPU |
 | **Root** | The admin account that can change anything |
@@ -53,6 +55,7 @@ Plain-word meanings of the terms used in the NEXUS docs.
 | **SwayOSD** | The volume/brightness pop-up |
 | **systemd** | The part of Linux that starts and stops services |
 | **Tailscale** | A private network between your own devices, so the deck can reach the home PC from anywhere |
+| **Tauri** | The toolkit the Iris app is built with (a Rust program showing web pages in a window) |
 | **Template** | A config file with `{{placeholders}}` that `nexus-theme` fills with a theme's colours |
 | **Theme** | A set of colours in a `theme.conf` file |
 | **Tiling** | Windows arranged side by side automatically, instead of overlapping |

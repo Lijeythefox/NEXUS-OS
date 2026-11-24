@@ -41,7 +41,7 @@ Only work on the current phase (see `docs/ROADMAP.md`). Do not start the next ph
 1. Smooth desktop on the OptiPlex.
 2. NEXUS menu.
 3. Themes.
-4. Apps (and Iris through the home PC).
+4. Apps (and the Iris app: Elijah's Roamies-based desktop companion, repo `Lijeythefox/IRIS`).
 5. Deck board: choose it and bring the desktop up on it.
 6. Deck hardware (touch, keyboard, controller, Pico, SD card, modules, breadboard module).
 7. Offline AI on the deck.

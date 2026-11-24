@@ -76,6 +76,33 @@ result "OTHER_CONFIGS=$other"
 [[ "$other" == ok ]] || exit 1
 echo "::endgroup::"
 
+echo "::group::Check the app installer list"
+apps=ok
+nexus-apps check || apps=FAILED
+# Every Debian package the installer can install must exist in Debian 13 (a dry run, nothing is installed).
+pkgs="$(nexus-apps --arch amd64 apt-packages)"
+echo "$pkgs"
+if ! apt-get install -s --no-install-recommends $pkgs >"$OUT/apps-apt.log" 2>&1; then
+	grep -E '^E:|Unable|has no installation candidate' "$OUT/apps-apt.log" | head -20
+	apps=FAILED
+fi
+result "APPS_LIST=$apps"
+[[ "$apps" == ok ]] || exit 1
+fuzzel --help 2>&1 | grep -q -- '--select-index' && result "FUZZEL_SELECT_INDEX=yes" || result "FUZZEL_SELECT_INDEX=no"
+echo "::endgroup::"
+
+echo "::group::Try real installs (a Debian app, a zip download, an AppImage download)"
+# Downloads depend on GitHub, so a failure here is reported but doesn't fail the check.
+if nexus-apps --arch amd64 apply --install terminal-tools,godot,prism --user tester >"$OUT/apps-install.log" 2>&1 &&
+	command -v btop >/dev/null && [[ -x /usr/local/bin/godot && -x /usr/local/bin/prismlauncher ]] &&
+	ls /usr/share/applications/nexus-godot.desktop /usr/share/applications/nexus-prism.desktop >/dev/null; then
+	result "APPS_INSTALL=ok"
+else
+	result "APPS_INSTALL=FAILED (see apps-install.log; not blocking)"
+fi
+tail -n 25 "$OUT/apps-install.log"
+echo "::endgroup::"
+
 chmod -R a+rX "$OUT"
 cat "$OUT/result.txt"
 exit 0

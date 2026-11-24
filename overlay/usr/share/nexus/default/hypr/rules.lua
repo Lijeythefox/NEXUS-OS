@@ -28,3 +28,12 @@ for _, namespace in ipairs({ "waybar", "launcher", "notifications", "swayosd" })
         ignore_alpha = 0.2,
     })
 end
+
+-- The app installer's terminal (nexus-apps) floats in the middle of the screen.
+hl.window_rule({
+    name   = "nexus-apps-terminal",
+    match  = { class = "^nexus-apps$" },
+    float  = true,
+    center = true,
+    size   = "900 600",
+})

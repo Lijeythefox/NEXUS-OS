@@ -9,13 +9,14 @@ first_of() {
 	return 1
 }
 later() { notify-send "$1" "$2"; exit 0; }
+get="Install it from NEXUS menu › Install apps."
 
 case "${1:-}" in
-browser) app="$(first_of chromium firefox-esr firefox)" || later "No browser yet" "Chromium is added in build phase 4." ;;
+browser) app="$(first_of chromium firefox-esr firefox)" || later "No browser installed" "$get" ;;
 files) app="$(first_of thunar)" || later "No file manager" "Thunar is missing." ;;
-code) app="$(first_of code codium)" || later "No code editor yet" "VS Code is added in build phase 4." ;;
-games) app="$(first_of es-de emulationstation)" || later "No game launcher yet" "ES-DE is added in build phase 4." ;;
-keyboard) later "On-screen keyboard" "The on-screen keyboard is added with the deck features (build phase 5)." ;;
+code) app="$(first_of code codium)" || later "VS Code isn't installed" "$get" ;;
+games) app="$(first_of es-de emulationstation)" || later "ES-DE isn't installed" "$get" ;;
+keyboard) later "On-screen keyboard" "The on-screen keyboard is added with the deck features (build phase 6)." ;;
 *)
 	echo "usage: nexus-open browser|files|code|games|keyboard" >&2
 	exit 2

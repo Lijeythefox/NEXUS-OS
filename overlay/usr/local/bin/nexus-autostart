@@ -18,5 +18,7 @@ nexus-osd start &
 hypridle -c /usr/share/nexus/default/hypr/hypridle.conf &
 systemctl --user start hyprpolkitagent.service >/dev/null 2>&1 &
 command -v xdg-user-dirs-update >/dev/null && xdg-user-dirs-update &
+# The first time: once you've unlocked, ask which apps to install (none are in the image).
+nexus-apps first-run &
 wait -n 2>/dev/null
 exit 0

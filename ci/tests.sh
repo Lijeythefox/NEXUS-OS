@@ -135,6 +135,104 @@ check "a workspace with windows is marked occupied" ws_occupied
 check "a workspace with no windows is marked empty" ws_empty
 check "still prints valid output when Hyprland does not answer" ws_no_hyprland
 
+echo "nexus-apps"
+apps() { python3 "$BIN/nexus-apps" --conf "${CONF:-$SHARE/apps.conf}" --state "$T/state" "$@"; }
+mkconf() { CONF="$T/apps-test.conf"; printf '%s\n' "$@" >"$CONF"; }
+fakerel() { # owner/repo, JSON for its releases list
+	mkdir -p "$T/api/repos/$1"
+	printf '%s' "$2" >"$T/api/repos/$1/releases"
+}
+apps_conf_is_valid() { CONF="" apps check; }
+apps_check_rejects_unknown_key() {
+	mkconf '[x]' 'name = X' 'about = x' 'default = no' 'apt = x' 'colour = red'
+	if apps check >"$T/o" 2>&1; then echo "exit 0"; return 1; fi
+	grep -q colour "$T/o"
+}
+apps_check_rejects_app_with_nothing_to_install() {
+	mkconf '[x]' 'name = X' 'about = x' 'default = no'
+	if apps check >"$T/o" 2>&1; then echo "exit 0"; return 1; fi
+	grep -q '\[x\]' "$T/o"
+}
+apps_pc_only_hidden_on_arm() {
+	CONF="" apps --arch arm64 list >"$T/o" || return 1
+	! grep -q '^arduino-ide' "$T/o" && CONF="" apps --arch amd64 list | grep -q '^arduino-ide'
+}
+apps_defaults_are_elijahs_list() {
+	got="$(CONF="" apps --arch amd64 list | awk -F'\t' '$2=="yes"{print $1}' | sort | tr '\n' ' ')"
+	[[ "$got" == "chromium everyday pico-tools python-tools ssh-server tailscale terminal-tools vscode " ]] || { echo "got: $got"; return 1; }
+}
+apps_shows_installed() {
+	mkdir -p "$T/state"; touch "$T/state/thonny"
+	CONF="" apps --arch amd64 list | awk -F'\t' '$1=="thonny"{print $3}' | grep -qx installed
+}
+apps_one_apt_call_without_recommends() {
+	CONF="" apps --arch amd64 plan --install chromium,everyday >"$T/o" || return 1
+	[[ "$(grep -c 'apt-get install' "$T/o")" == 1 ]] || { cat "$T/o"; return 1; }
+	grep 'apt-get install' "$T/o" | grep -- '--no-install-recommends' | grep -q chromium && grep 'apt-get install' "$T/o" | grep -q mpv
+}
+apps_repo_added_before_install() {
+	CONF="" apps --arch amd64 plan --install vscode >"$T/o" || return 1
+	key=$(grep -n 'microsoft.asc' "$T/o" | head -1 | cut -d: -f1); inst=$(grep -n 'apt-get install' "$T/o" | cut -d: -f1)
+	[[ -n "$key" && -n "$inst" && "$key" -lt "$inst" ]] || { cat "$T/o"; return 1; }
+}
+apps_ssh_switched_off() { CONF="" apps --arch amd64 plan --install ssh-server | grep -q 'systemctl disable --now ssh.service ssh.socket'; }
+apps_pipx_runs_as_user() { CONF="" apps --arch amd64 plan --install pico-tools --user sam | grep -q 'as sam: pipx install mpremote'; }
+apps_unknown_app_named() {
+	if CONF="" apps plan --install nope >"$T/o" 2>&1; then echo "exit 0"; return 1; fi
+	grep -q nope "$T/o"
+}
+apps_pc_only_refused_on_arm() {
+	if CONF="" apps --arch arm64 plan --install arduino-ide >"$T/o" 2>&1; then echo "exit 0"; return 1; fi
+	grep -qi 'PC only' "$T/o"
+}
+GODOT_REL='[{"tag_name":"4.5-stable","prerelease":false,"draft":false,"assets":[
+ {"name":"Godot_v4.5-stable_mono_linux_x86_64.zip","browser_download_url":"https://x/mono.zip","digest":"sha256:aa"},
+ {"name":"Godot_v4.5-stable_linux.x86_64.zip","browser_download_url":"https://x/amd.zip","digest":"sha256:bb"},
+ {"name":"Godot_v4.5-stable_linux.arm64.zip","browser_download_url":"https://x/arm.zip","digest":"sha256:cc"}]}]'
+apps_picks_file_for_machine() {
+	fakerel godotengine/godot "$GODOT_REL"
+	NEXUS_APPS_API="file://$T/api" CONF="" apps --arch amd64 resolve godot | grep -q 'https://x/amd.zip' &&
+		NEXUS_APPS_API="file://$T/api" CONF="" apps --arch arm64 resolve godot | grep -q 'https://x/arm.zip'
+}
+apps_skips_test_releases() {
+	fakerel Legcord/Legcord '[{"tag_name":"v2-beta","prerelease":true,"draft":false,"assets":[{"name":"Legcord-2-linux-amd64.deb","browser_download_url":"https://x/beta.deb"}]},
+	 {"tag_name":"v1","prerelease":false,"draft":false,"assets":[{"name":"Legcord-1-linux-amd64.deb","browser_download_url":"https://x/stable.deb"}]}]'
+	fakerel FreeTubeApp/FreeTube '[{"tag_name":"v2-beta","prerelease":true,"draft":false,"assets":[{"name":"freetube_2_amd64.deb","browser_download_url":"https://x/ft.deb"}]}]'
+	NEXUS_APPS_API="file://$T/api" CONF="" apps --arch amd64 resolve legcord | grep -q stable.deb &&
+		NEXUS_APPS_API="file://$T/api" CONF="" apps --arch amd64 resolve freetube | grep -q ft.deb
+}
+apps_no_file_names_the_app() {
+	fakerel Lijeythefox/IRIS '[{"tag_name":"v1.0.2","prerelease":false,"draft":false,"assets":[{"name":"Iris_1.0.2_x64-setup.exe","browser_download_url":"https://x/iris.exe"}]}]'
+	if NEXUS_APPS_API="file://$T/api" CONF="" apps --arch amd64 resolve iris >"$T/o" 2>&1; then echo "exit 0"; return 1; fi
+	grep -q Iris "$T/o"
+}
+apps_download_checks_fingerprint() {
+	echo hello >"$T/hello.deb"
+	good="sha256:$(sha256sum "$T/hello.deb" | cut -d' ' -f1)"
+	mkconf '[t]' 'name = T' 'about = t' 'default = no' 'arch = amd64' 'github = a/b' 'amd64_file = \.deb$' 'kind = deb'
+	fakerel a/b "[{\"tag_name\":\"1\",\"prerelease\":false,\"draft\":false,\"assets\":[{\"name\":\"t.deb\",\"browser_download_url\":\"file://$T/hello.deb\",\"digest\":\"sha256:0000\"}]}]"
+	if NEXUS_APPS_API="file://$T/api" apps --arch amd64 fetch t "$T/dl1" >"$T/o" 2>&1; then echo "accepted a bad fingerprint"; return 1; fi
+	[[ ! -e "$T/dl1/t.deb" ]] || { echo "bad file kept"; return 1; }
+	fakerel a/b "[{\"tag_name\":\"1\",\"prerelease\":false,\"draft\":false,\"assets\":[{\"name\":\"t.deb\",\"browser_download_url\":\"file://$T/hello.deb\",\"digest\":\"$good\"}]}]"
+	NEXUS_APPS_API="file://$T/api" apps --arch amd64 fetch t "$T/dl2" && [[ -s "$T/dl2/t.deb" ]]
+}
+check "the app list has no mistakes" apps_conf_is_valid
+check "the list check refuses an unknown setting and names it" apps_check_rejects_unknown_key
+check "the list check refuses an app with nothing to install" apps_check_rejects_app_with_nothing_to_install
+check "PC-only apps are hidden on ARM boards" apps_pc_only_hidden_on_arm
+check "ticked by default: Elijah's list" apps_defaults_are_elijahs_list
+check "installed apps are marked installed" apps_shows_installed
+check "Debian packages go in one apt call without recommended extras" apps_one_apt_call_without_recommends
+check "an app's extra repository is added before installing" apps_repo_added_before_install
+check "the SSH server is switched off after installing" apps_ssh_switched_off
+check "pipx tools are installed as the user, not root" apps_pipx_runs_as_user
+check "an unknown app is refused by name" apps_unknown_app_named
+check "a PC-only app is refused on an ARM board" apps_pc_only_refused_on_arm
+check "the release file for this machine is picked" apps_picks_file_for_machine
+check "test releases are skipped unless the app allows them" apps_skips_test_releases
+check "no matching release file: the error names the app" apps_no_file_names_the_app
+check "downloads with the wrong fingerprint are refused and deleted" apps_download_checks_fingerprint
+
 echo
 echo "$pass passed, $failed failed"
 ((failed == 0))

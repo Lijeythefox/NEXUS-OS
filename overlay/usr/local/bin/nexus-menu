@@ -1,5 +1,5 @@
 #!/bin/bash
-# The NEXUS menu. More sections (Style, Setup, Install, Update, Tools) arrive in phase 2.
+# The NEXUS menu. More sections (Style, Setup, Update, Tools) arrive in phase 2.
 if pidof fuzzel >/dev/null; then pkill -x fuzzel; exit 0; fi
 
 if [[ "${1:-}" == theme ]]; then
@@ -7,9 +7,10 @@ if [[ "${1:-}" == theme ]]; then
 	exit 0
 fi
 
-choice="$(printf '%s\n' "Apps" "Shortcuts" "Next wallpaper" "Screenshot" "Power" | nexus-pick "NEXUS" --lines 5)"
+choice="$(printf '%s\n' "Apps" "Install apps" "Shortcuts" "Next wallpaper" "Screenshot" "Power" | nexus-pick "NEXUS" --lines 6)"
 case "$choice" in
 "Apps") exec nexus-launcher ;;
+"Install apps") exec nexus-apps ;;
 "Shortcuts") exec nexus-keys ;;
 "Next wallpaper") exec nexus-wallpaper next ;;
 "Screenshot") sleep 0.4; exec nexus-screenshot full ;;

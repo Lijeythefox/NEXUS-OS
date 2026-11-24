@@ -1,0 +1,654 @@
+#!/usr/bin/python3
+"""nexus-apps: installs the apps you pick. None of them are in the NEXUS image, so it stays small.
+
+  nexus-apps                    open the picker (also: nexus-apps pick)
+  nexus-apps first-run          ask once, after the first unlock (run by nexus-autostart)
+  nexus-apps list               apps for this machine: id, ticked, installed, name
+  nexus-apps check              look for mistakes in the app list
+  nexus-apps plan --install a,b [--remove c]          show what would be done
+  sudo nexus-apps apply --install a,b [--remove c]    do it
+  nexus-apps resolve ID         the release file that would be downloaded for ID
+  nexus-apps fetch ID DIR       download that file into DIR and check its fingerprint
+  nexus-apps apt-packages       every Debian package in the list (used by the GitHub check)
+
+The list of apps is /usr/share/nexus/apps.conf.
+"""
+import argparse
+import configparser
+import getpass
+import hashlib
+import json
+import os
+import platform
+import re
+import shlex
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.parse
+import urllib.request
+import zipfile
+from pathlib import Path
+
+CONF = "/usr/share/nexus/apps.conf"
+STATE = "/var/lib/nexus/apps"
+OPT = Path("/opt/nexus-apps")
+LOCAL_BIN = Path("/usr/local/bin")
+APPS_DIR = Path("/usr/share/applications")
+GITHUB_API = os.environ.get("NEXUS_APPS_API", "https://api.github.com")
+GITLAB_API = os.environ.get("NEXUS_APPS_GITLAB_API", "https://gitlab.com/api/v4")
+
+KEYS = {"name", "about", "default", "arch", "apt", "pipx", "repo_key", "repo_keyfile", "repo_line", "github", "gitlab",
+        "amd64_file", "arm64_file", "prerelease", "kind", "command", "icon", "services_off", "setup"}
+KINDS = {"deb", "appimage", "zip"}
+SETUPS = {"samba-roms"}
+ARCHES = ("amd64", "arm64")
+SAMBA_START = "# >>> NEXUS ROMs share"
+SAMBA_END = "# <<< NEXUS ROMs share"
+
+
+class Problem(Exception):
+    pass
+
+
+def say(text):
+    print(text, flush=True)
+
+
+# ---------------------------------------------------------------- the app list
+
+def machine_arch():
+    try:
+        out = subprocess.run(["dpkg", "--print-architecture"], capture_output=True, text=True, check=True).stdout.strip()
+        if out:
+            return out
+    except (OSError, subprocess.CalledProcessError):
+        pass
+    return {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine(), platform.machine())
+
+
+def load(path):
+    parser = configparser.ConfigParser(interpolation=None, inline_comment_prefixes=None)
+    try:
+        with open(path, encoding="utf-8") as handle:
+            parser.read_file(handle)
+    except (OSError, configparser.Error) as error:
+        raise Problem(f"can't read the app list {path}: {error}")
+    apps = {}
+    for section in parser.sections():
+        apps[section] = {key: value.strip() for key, value in parser.items(section)}
+    return apps
+
+
+def problems_in(apps):
+    found = []
+    for app_id, app in apps.items():
+        where = f"[{app_id}]"
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", app_id):
+            found.append(f"{where} the id may only use a-z, 0-9 and -")
+        for key in app:
+            if key not in KEYS:
+                found.append(f"{where} unknown setting '{key}'")
+        for key in ("name", "about", "default"):
+            if not app.get(key):
+                found.append(f"{where} needs '{key}'")
+        if app.get("default") not in (None, "", "yes", "no"):
+            found.append(f"{where} default must be yes or no")
+        if app.get("prerelease", "no") not in ("yes", "no"):
+            found.append(f"{where} prerelease must be yes or no")
+        if app.get("arch") and app["arch"] not in ARCHES:
+            found.append(f"{where} arch must be amd64 or arm64")
+        if not any(app.get(k) for k in ("apt", "pipx", "github", "gitlab")):
+            found.append(f"{where} has nothing to install (give apt, pipx, github or gitlab)")
+        repo = [app.get(k) for k in ("repo_key", "repo_keyfile", "repo_line")]
+        if any(repo) and not all(repo):
+            found.append(f"{where} needs all three of repo_key, repo_keyfile and repo_line")
+        if any(repo) and not app.get("apt"):
+            found.append(f"{where} adds a repository but installs nothing from it (apt is empty)")
+        if app.get("github") and app.get("gitlab"):
+            found.append(f"{where} give github or gitlab, not both")
+        if app.get("github") or app.get("gitlab"):
+            if app.get("kind") not in KINDS:
+                found.append(f"{where} kind must be one of: {', '.join(sorted(KINDS))}")
+            for arch in arches_of(app):
+                pattern = app.get(f"{arch}_file")
+                if not pattern:
+                    found.append(f"{where} needs {arch}_file (or arch = amd64 for a PC-only app)")
+                    continue
+                try:
+                    re.compile(pattern)
+                except re.error as error:
+                    found.append(f"{where} {arch}_file is not a valid pattern: {error}")
+            if app.get("kind") in ("appimage", "zip") and not app.get("command"):
+                found.append(f"{where} needs 'command' (the name to start it with)")
+        elif app.get("kind"):
+            found.append(f"{where} kind is only for github or gitlab downloads")
+        if app.get("setup") and app["setup"] not in SETUPS:
+            found.append(f"{where} unknown setup '{app['setup']}'")
+    return found
+
+
+def arches_of(app):
+    return (app["arch"],) if app.get("arch") else ARCHES
+
+
+def words(app, key):
+    return app.get(key, "").split()
+
+
+def state_file(state, app_id):
+    return Path(state) / app_id
+
+
+def is_installed(state, app_id):
+    return state_file(state, app_id).exists()
+
+
+def available(apps, arch):
+    return {i: a for i, a in apps.items() if arch in arches_of(a)}
+
+
+# ---------------------------------------------------------------- finding release files
+
+def read_json(url):
+    request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "nexus-apps"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.load(response)
+    except (OSError, ValueError) as error:
+        raise Problem(f"couldn't read {url}: {error}")
+
+
+def releases_of(app):
+    if app.get("github"):
+        url = f"{GITHUB_API}/repos/{app['github']}/releases"
+        if not url.startswith("file:"):
+            url += "?per_page=15"
+        result = []
+        for rel in read_json(url):
+            result.append({
+                "tag": rel.get("tag_name", ""), "draft": rel.get("draft", False), "prerelease": rel.get("prerelease", False),
+                "files": [{"name": a.get("name", ""), "url": a.get("browser_download_url", ""), "digest": a.get("digest")}
+                          for a in rel.get("assets", [])],
+            })
+        return result, f"github.com/{app['github']}"
+    project = urllib.parse.quote(app["gitlab"], safe="")
+    url = f"{GITLAB_API}/projects/{project}/releases"
+    result = []
+    for rel in read_json(url):
+        links = (rel.get("assets") or {}).get("links", [])
+        result.append({
+            "tag": rel.get("tag_name", ""), "draft": False, "prerelease": bool(rel.get("upcoming_release")),
+            "files": [{"name": l.get("name", ""), "url": l.get("direct_asset_url") or l.get("url", ""), "digest": None} for l in links],
+        })
+    return result, f"gitlab.com/{app['gitlab']}"
+
+
+def resolve(app_id, app, arch):
+    if arch not in arches_of(app):
+        raise Problem(f"{app['name']} is PC only, so it can't be installed on this machine")
+    pattern = re.compile(app[f"{arch}_file"])
+    releases, where = releases_of(app)
+    allow_test = app.get("prerelease") == "yes"
+    for rel in releases:
+        if rel["draft"] or (rel["prerelease"] and not allow_test):
+            continue
+        for item in rel["files"]:
+            name = item["name"]
+            if pattern.search(name) and item["url"] and "/" not in name:
+                return {"name": name, "url": item["url"], "digest": item.get("digest"), "tag": rel["tag"], "where": where}
+    raise Problem(f"no {arch} download of {app['name']} found in the latest releases on {where}")
+
+
+def download(url, target):
+    part = Path(str(target) + ".part")
+    request = urllib.request.Request(url, headers={"User-Agent": "nexus-apps"})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response, open(part, "wb") as out:
+            total = int(response.headers.get("Content-Length") or 0)
+            done, shown = 0, -10
+            while True:
+                chunk = response.read(1 << 16)
+                if not chunk:
+                    break
+                out.write(chunk)
+                done += len(chunk)
+                if total and done * 100 // total >= shown + 10:
+                    shown = done * 100 // total
+                    say(f"    {shown}% of {total // 1_000_000 or 1} MB")
+    except OSError as error:
+        part.unlink(missing_ok=True)
+        raise Problem(f"download failed: {error}")
+    return part
+
+
+def fetch(app_id, app, arch, folder):
+    found = resolve(app_id, app, arch)
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / found["name"]
+    say(f"  downloading {found['name']} ({found['tag']}) from {found['where']}")
+    part = download(found["url"], target)
+    digest = found.get("digest") or ""
+    if digest.startswith("sha256:"):
+        actual = hashlib.sha256(part.read_bytes()).hexdigest()
+        if actual != digest.split(":", 1)[1].lower():
+            part.unlink(missing_ok=True)
+            raise Problem(f"{found['name']} doesn't match the fingerprint {found['where']} published, so it was deleted")
+        say("  fingerprint checked")
+    else:
+        say(f"  note: {found['where']} publishes no fingerprint for this file; it came over a secure (HTTPS) link")
+    part.rename(target)
+    return target
+
+
+# ---------------------------------------------------------------- the plan
+
+class Step:
+    def __init__(self, text, apps, run=None, action=None):
+        self.text, self.apps, self.run, self.action = text, apps, run, action
+
+
+def owner_of(user):
+    return user or os.environ.get("SUDO_USER") or getpass.getuser()
+
+
+def home_of(user):
+    return Path(os.path.expanduser(f"~{user}"))
+
+
+def build_plan(apps, arch, state, install, remove, user):
+    for app_id in install + remove:
+        if app_id not in apps:
+            raise Problem(f"there is no app called '{app_id}' in the list")
+        if arch not in arches_of(apps[app_id]):
+            raise Problem(f"{apps[app_id]['name']} is PC only, so it can't be installed on this machine")
+    steps = []
+    adding = [apps[i] | {"id": i} for i in install]
+    for app in adding:
+        if app.get("repo_line"):
+            steps.append(Step(f"add the {app['name']} repository: download {app['repo_key']} to {app['repo_keyfile']}",
+                              [app["id"]], action=lambda a=app: add_repo(a)))
+    debs = [a for a in adding if a.get("kind") == "deb"]
+    packages = sorted({p for a in adding for p in words(a, "apt")})
+    if packages or debs:
+        steps.append(Step("apt-get update", [a["id"] for a in adding if a.get("apt") or a.get("kind") == "deb"],
+                          run=["apt-get", "update"]))
+    if packages:
+        steps.append(Step("apt-get install -y --no-install-recommends " + " ".join(packages),
+                          [a["id"] for a in adding if a.get("apt")],
+                          run=["apt-get", "install", "-y", "--no-install-recommends", *packages]))
+    for app in adding:
+        if app.get("github") or app.get("gitlab"):
+            source = app.get("github") or app.get("gitlab")
+            steps.append(Step(f"download {app['name']} ({app['kind']}) from the latest release of {source} and install it",
+                              [app["id"]], action=lambda a=app: install_download(a, arch, state, user)))
+        for tool in words(app, "pipx"):
+            steps.append(Step(f"as {user}: pipx install {tool}", [app["id"]],
+                              run=["runuser", "-u", user, "--", "pipx", "install", "--force", tool]))
+        if app.get("services_off"):
+            units = words(app, "services_off")
+            steps.append(Step("systemctl disable --now " + " ".join(units), [app["id"]],
+                              run=["systemctl", "disable", "--now", *units]))
+        if app.get("setup") == "samba-roms":
+            steps.append(Step(f"share {user}'s ROMs folder over Samba and set its password", [app["id"]],
+                              action=lambda: setup_samba(user)))
+
+    removing = [apps[i] | {"id": i} for i in remove]
+    keep = {p for i, a in apps.items() if i not in remove and (i in install or is_installed(state, i)) for p in words(a, "apt")}
+    for app in removing:
+        for tool in words(app, "pipx"):
+            steps.append(Step(f"as {user}: pipx uninstall {tool}", [app["id"]], run=["runuser", "-u", user, "--", "pipx", "uninstall", tool]))
+        if app.get("github") or app.get("gitlab"):
+            steps.append(Step(f"remove the downloaded {app['name']}", [app["id"]], action=lambda a=app: remove_download(a, state)))
+        if app.get("setup") == "samba-roms":
+            steps.append(Step("remove the ROMs share from /etc/samba/smb.conf", [app["id"]], action=remove_samba))
+    gone = sorted({p for a in removing for p in words(a, "apt")} - keep)
+    if gone:
+        steps.append(Step("apt-get remove -y " + " ".join(gone), [a["id"] for a in removing if a.get("apt")],
+                          run=["apt-get", "remove", "-y", *gone]))
+        steps.append(Step("apt-get autoremove -y", [a["id"] for a in removing], run=["apt-get", "autoremove", "-y"]))
+    for app in removing:
+        if app.get("repo_line"):
+            steps.append(Step(f"remove the {app['name']} repository", [app["id"]], action=lambda a=app: remove_repo(a)))
+    return steps
+
+
+# ---------------------------------------------------------------- doing it (as root)
+
+def add_repo(app):
+    keyfile = Path(app["repo_keyfile"])
+    keyfile.parent.mkdir(parents=True, exist_ok=True)
+    part = download(app["repo_key"], keyfile)
+    part.chmod(0o644)
+    part.rename(keyfile)
+    Path(f"/etc/apt/sources.list.d/nexus-{app['id']}.list").write_text(app["repo_line"] + "\n", encoding="utf-8")
+
+
+def remove_repo(app):
+    Path(f"/etc/apt/sources.list.d/nexus-{app['id']}.list").unlink(missing_ok=True)
+    Path(app["repo_keyfile"]).unlink(missing_ok=True)
+
+
+def write_launcher(app, run_path, icon):
+    command = app["command"]
+    wrapper = LOCAL_BIN / command
+    wrapper.write_text(f'#!/bin/sh\nexec {shlex.quote(str(run_path))} "$@"\n', encoding="utf-8")
+    wrapper.chmod(0o755)
+    entry = APPS_DIR / f"nexus-{app['id']}.desktop"
+    entry.write_text("[Desktop Entry]\nType=Application\n"
+                     f"Name={app['name']}\nComment={app['about']}\nExec={command} %U\nIcon={icon}\n"
+                     "Terminal=false\nCategories=Utility;\n", encoding="utf-8")
+    return [str(wrapper), str(entry)]
+
+
+def appimage_icon(root):
+    for pattern in ("*.svg", "*.png"):
+        for found in sorted(root.glob(pattern)):
+            return str(found)
+    return "application-x-executable"
+
+
+def install_download(app, arch, state, user):
+    work = Path(tempfile.mkdtemp(prefix=f"nexus-{app['id']}-", dir="/var/tmp"))
+    try:
+        file = fetch(app["id"], app, arch, work)
+        record = {"kind": app["kind"], "files": []}
+        if app["kind"] == "deb":
+            package = subprocess.run(["dpkg-deb", "-f", str(file), "Package"], capture_output=True, text=True, check=True).stdout.strip()
+            subprocess.run(["apt-get", "install", "-y", "--no-install-recommends", str(file)], check=True)
+            record["deb_package"] = package
+        else:
+            target = OPT / app["id"]
+            shutil.rmtree(target, ignore_errors=True)
+            OPT.mkdir(parents=True, exist_ok=True)
+            if app["kind"] == "appimage":
+                # Unpacked as the user (the AppImage runs itself to unpack), so no downloaded program runs as root.
+                shutil.chown(work, user)
+                file.chmod(0o755)
+                shutil.chown(file, user)
+                subprocess.run(["runuser", "-u", user, "--", "env", "-C", str(work), f"./{file.name}", "--appimage-extract"],
+                               check=True, stdout=subprocess.DEVNULL)
+                shutil.move(str(work / "squashfs-root"), target)
+                subprocess.run(["chown", "-R", "root:root", str(target)], check=True)
+                run_path, icon = target / "AppRun", appimage_icon(target)
+            else:
+                target.mkdir(parents=True)
+                with zipfile.ZipFile(file) as archive:
+                    members = [m for m in archive.infolist() if not m.is_dir()]
+                    if not members:
+                        raise Problem(f"{file.name} is empty")
+                    biggest = max(members, key=lambda m: m.file_size)
+                    run_path = target / Path(biggest.filename).name
+                    with archive.open(biggest) as src, open(run_path, "wb") as out:
+                        shutil.copyfileobj(src, out)
+                run_path.chmod(0o755)
+                icon = app.get("icon") or "application-x-executable"
+            record["files"] = [str(target), *write_launcher(app, run_path, icon)]
+        state_file(state, app["id"]).with_suffix(".json").write_text(json.dumps(record), encoding="utf-8")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def remove_download(app, state):
+    info = state_file(state, app["id"]).with_suffix(".json")
+    record = json.loads(info.read_text(encoding="utf-8")) if info.exists() else {}
+    if record.get("deb_package"):
+        subprocess.run(["apt-get", "remove", "-y", record["deb_package"]], check=True)
+    for path in record.get("files", []):
+        p = Path(path)
+        if p.is_dir():
+            shutil.rmtree(p, ignore_errors=True)
+        else:
+            p.unlink(missing_ok=True)
+    info.unlink(missing_ok=True)
+
+
+def setup_samba(user):
+    sdcard = Path("/mnt/sdcard/ROMs")
+    roms = sdcard if sdcard.is_dir() else home_of(user) / "ROMs"
+    roms.mkdir(parents=True, exist_ok=True)
+    shutil.chown(roms, user, user)
+    conf = Path("/etc/samba/smb.conf")
+    text = conf.read_text(encoding="utf-8") if conf.exists() else ""
+    if SAMBA_START not in text:
+        block = f"\n{SAMBA_START}\n[ROMs]\n   path = {roms}\n   read only = no\n   valid users = {user}\n{SAMBA_END}\n"
+        conf.write_text(text + block, encoding="utf-8")
+    say(f"  Pick a password for the ROMs share (you'll type it on the other computer, with the user name {user}):")
+    subprocess.run(["smbpasswd", "-a", user], check=True)
+    subprocess.run(["systemctl", "restart", "smbd"], check=True)
+
+
+def remove_samba():
+    conf = Path("/etc/samba/smb.conf")
+    if conf.exists():
+        text = conf.read_text(encoding="utf-8")
+        text = re.sub(rf"\n?{re.escape(SAMBA_START)}.*?{re.escape(SAMBA_END)}\n?", "\n", text, flags=re.S)
+        conf.write_text(text, encoding="utf-8")
+
+
+def apply(apps, arch, state, install, remove, user):
+    if os.geteuid() != 0:
+        raise Problem("installing needs admin rights: run it as  sudo nexus-apps apply ...")
+    steps = build_plan(apps, arch, state, install, remove, user)
+    Path(state).mkdir(parents=True, exist_ok=True)
+    failed = {}
+    for step in steps:
+        if any(a in failed for a in step.apps) and step.apps and all(a in failed for a in step.apps):
+            continue
+        say(f"\n==> {step.text}")
+        try:
+            if step.run:
+                subprocess.run(step.run, check=True, env=os.environ | {"DEBIAN_FRONTEND": "noninteractive"})
+            else:
+                step.action()
+        except (Problem, OSError, subprocess.CalledProcessError, zipfile.BadZipFile) as error:
+            say(f"    problem: {error}")
+            for app_id in step.apps:
+                failed.setdefault(app_id, str(error))
+    for app_id in install:
+        if app_id not in failed:
+            state_file(state, app_id).write_text(time.strftime("%Y-%m-%d") + "\n", encoding="utf-8")
+    for app_id in remove:
+        if app_id not in failed:
+            state_file(state, app_id).unlink(missing_ok=True)
+    say("\n" + "=" * 60)
+    done_in = [apps[i]["name"] for i in install if i not in failed]
+    done_out = [apps[i]["name"] for i in remove if i not in failed]
+    if done_in:
+        say("Installed: " + ", ".join(done_in))
+    if done_out:
+        say("Removed: " + ", ".join(done_out))
+    for app_id, why in failed.items():
+        say(f"Not done: {apps[app_id]['name']} ({why})")
+    if any(words(apps[i], "pipx") for i in install):
+        say("Tools installed with pipx work after you log out and back in.")
+    return 1 if failed else 0
+
+
+# ---------------------------------------------------------------- the picker
+
+def notify(title, body):
+    subprocess.run(["notify-send", "-a", "NEXUS", title, body], check=False)
+
+
+def fuzzel_can_select():
+    try:
+        out = subprocess.run(["fuzzel", "--help"], capture_output=True, text=True).stdout
+    except OSError:
+        return False
+    return "--select-index" in out
+
+
+def pick(apps, arch, state, first):
+    if not os.environ.get("WAYLAND_DISPLAY"):
+        say("The picker needs the desktop. From a text screen, use:  sudo nexus-apps apply --install ID,ID")
+        for line in list_lines(apps, arch, state):
+            say("  " + line)
+        return 0
+    shown = available(apps, arch)
+    ids = list(shown)
+    ticked = {i for i in ids if first and shown[i]["default"] == "yes" and not is_installed(state, i)}
+    untick = set()
+    can_select = fuzzel_can_select()
+    cursor = 0
+    while True:
+        lines = [f"▶  Go: install {len(ticked)}, remove {len(untick)}", "✕  Cancel"]
+        for i in ids:
+            app = shown[i]
+            if is_installed(state, i):
+                mark = "[–] will be removed" if i in untick else "[✓] installed"
+                lines.append(f"{mark}  {app['name']}")
+            else:
+                lines.append(f"{'[x]' if i in ticked else '[ ]'}  {app['name']}  ·  {app['about']}")
+        args = ["nexus-pick", "Apps", "--index", "--lines", "16", "--width", "70"]
+        if can_select:
+            args += ["--select-index", str(cursor)]
+        result = subprocess.run(args, input="\n".join(lines) + "\n", capture_output=True, text=True)
+        if result.returncode != 0 or not result.stdout.strip().isdigit():
+            break
+        index = int(result.stdout.strip())
+        cursor = index
+        if index == 1:
+            break
+        if index == 0:
+            if not ticked and not untick:
+                break
+            return run_in_terminal(apps, state, sorted(ticked), sorted(untick))
+        app_id = ids[index - 2]
+        if is_installed(state, app_id):
+            untick ^= {app_id}
+        else:
+            ticked ^= {app_id}
+    if first:
+        notify("Apps", "You can install apps any time: NEXUS menu › Install apps")
+    return 0
+
+
+def run_in_terminal(apps, state, install, remove):
+    command = ["sudo", "nexus-apps", "apply", "--user", getpass.getuser()]
+    if install:
+        command += ["--install", ",".join(install)]
+    if remove:
+        command += ["--remove", ",".join(remove)]
+    script = (f"echo 'NEXUS will install or remove apps. Type your password when asked.'; echo; {shlex.join(command)}; "
+              "echo; read -rp 'Press Enter to close this window. ' _")
+    subprocess.run(["foot", "--app-id", "nexus-apps", "--title", "NEXUS apps", "bash", "-c", script], check=False)
+    good = [apps[i]["name"] for i in install if is_installed(state, i)] + [apps[i]["name"] for i in remove if not is_installed(state, i)]
+    bad = [apps[i]["name"] for i in install if not is_installed(state, i)] + [apps[i]["name"] for i in remove if is_installed(state, i)]
+    if bad:
+        notify("Some apps weren't done", ", ".join(bad) + ". Try again from NEXUS menu › Install apps.")
+    elif good:
+        notify("Apps ready", ", ".join(good))
+    return 0
+
+
+def online(timeout=60):
+    end = time.time() + timeout
+    while time.time() < end:
+        try:
+            socket.create_connection(("deb.debian.org", 443), timeout=5).close()
+            return True
+        except OSError:
+            time.sleep(5)
+    return False
+
+
+def first_run(apps, arch, state):
+    marker = Path.home() / ".config" / "nexus" / "apps-asked"
+    if marker.exists():
+        return 0
+    while subprocess.run(["pgrep", "-x", "hyprlock"], capture_output=True).returncode == 0:
+        time.sleep(2)
+    time.sleep(2)
+    if not online():
+        notify("Apps not installed yet", "Connect to the internet, then open NEXUS menu › Install apps.")
+        return 0
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(time.strftime("%Y-%m-%d") + "\n", encoding="utf-8")
+    notify("Welcome to NEXUS", "Pick the apps you want. Your usual ones are ticked.")
+    return pick(apps, arch, state, first=True)
+
+
+# ---------------------------------------------------------------- command line
+
+def list_lines(apps, arch, state):
+    return [f"{i}\t{a['default']}\t{'installed' if is_installed(state, i) else '-'}\t{a['name']} — {a['about']}"
+            for i, a in available(apps, arch).items()]
+
+
+def split_ids(value):
+    return [v for v in (value or "").split(",") if v]
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="nexus-apps", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--conf", default=CONF, help=argparse.SUPPRESS)
+    parser.add_argument("--state", default=STATE, help=argparse.SUPPRESS)
+    parser.add_argument("--arch", default=None, help=argparse.SUPPRESS)
+    sub = parser.add_subparsers(dest="cmd")
+    sub.add_parser("pick")
+    sub.add_parser("first-run")
+    sub.add_parser("list")
+    sub.add_parser("check")
+    sub.add_parser("apt-packages")
+    for name in ("plan", "apply"):
+        p = sub.add_parser(name)
+        p.add_argument("--install", default="")
+        p.add_argument("--remove", default="")
+        p.add_argument("--user", default=None)
+    p = sub.add_parser("resolve")
+    p.add_argument("app")
+    p = sub.add_parser("fetch")
+    p.add_argument("app")
+    p.add_argument("folder")
+    args = parser.parse_args()
+
+    try:
+        apps = load(args.conf)
+        arch = args.arch or machine_arch()
+        cmd = args.cmd or "pick"
+        if cmd == "check":
+            found = problems_in(apps)
+            for line in found:
+                print(line)
+            if not found:
+                print(f"{len(apps)} apps, no problems")
+            return 1 if found else 0
+        found = problems_in(apps)
+        if found:
+            raise Problem("the app list has mistakes (run: nexus-apps check)\n  " + "\n  ".join(found))
+        if cmd == "list":
+            print("\n".join(list_lines(apps, arch, args.state)))
+        elif cmd == "apt-packages":
+            print(" ".join(sorted({p for a in available(apps, arch).values() if not a.get("repo_line") for p in words(a, "apt")})))
+        elif cmd in ("plan", "apply"):
+            install, remove = split_ids(args.install), split_ids(args.remove)
+            user = owner_of(args.user)
+            if cmd == "apply":
+                return apply(apps, arch, args.state, install, remove, user)
+            for step in build_plan(apps, arch, args.state, install, remove, user):
+                print(step.text)
+        elif cmd in ("resolve", "fetch"):
+            if args.app not in apps:
+                raise Problem(f"there is no app called '{args.app}' in the list")
+            if cmd == "resolve":
+                found = resolve(args.app, apps[args.app], arch)
+                print(f"{found['name']}\t{found['url']}\t{found.get('digest') or '-'}\t{found['tag']}")
+            else:
+                fetch(args.app, apps[args.app], arch, args.folder)
+        elif cmd == "first-run":
+            return first_run(apps, arch, args.state)
+        else:
+            return pick(apps, arch, args.state, first=False)
+    except Problem as problem:
+        print(f"nexus-apps: {problem}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -6,6 +6,17 @@
 
 The old tactical version (XFCE, HUD, Settings app) and its progress notes are on the `tactical-v1` branch.
 
+Tested so far: only in the VMware VM and the browser simulator. **The OptiPlex test is next** (checklist below and in `docs/ROADMAP.md`).
+
+## Latest change (25 Nov 2026): full documentation and plan
+
+Docs only; no image change, so no new build.
+
+- New: `README.md` (repo front page) and `docs/README.md` (index), `docs/ROADMAP.md` (the detailed 8-phase plan), `docs/USER-GUIDE.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPER-GUIDE.md`, `docs/TESTING.md`, `docs/HARDWARE.md` (deck parts, board comparison with AI speeds, breadboard module, Pico wiring, case), `docs/AI.md` (Iris on the home PC plus offline on the deck), `docs/DECISIONS.md`, `docs/GLOSSARY.md`.
+- Case and breadboard module CAD added to the repo: `docs/hardware/case/` (Fusion 360 script, STLs, labels, blueprint).
+- Elijah's answers that shaped the plan: deck board **decided later** (before phase 5); **offline AI on the deck too**, so the board must be an RK3588 or a Pi 5; docs **in this repo**.
+- `SPEC.md`: Iris (AI) section, Super + I, phases split from 6 to 8 (5 deck board, 6 deck hardware, 7 offline AI, 8 polish), open decisions updated. `CLAUDE.md` updated to match.
+
 ## What phase 1 contains
 
 - **Base:** Armbian `v26.5.1` CLI image (no Armbian desktop), Debian 13 trixie, `BOARD=uefi-x86`.
@@ -46,20 +57,24 @@ Nothing below could be run without a screen and GPU. Everything visual is untest
 
 ## Decisions made while building
 
+All decisions, with reasons, are in `docs/DECISIONS.md` (D-05 to D-09 are the ones below).
+
 - **`start-hyprland` instead of `uwsm`.** `SPEC.md` says the session starts through `uwsm`. Phase 1 uses Hyprland's own `start-hyprland` launcher because it has fewer parts that can't be tested without hardware. Needs Elijah's OK to keep, or switch back later.
 - **Workspace dots are NEXUS's own.** Waybar's built-in Hyprland workspace buttons send old-style commands that Hyprland refuses when it uses a Lua config, so clicks would do nothing. The dots are five small custom bar items, refreshed by Hyprland events (no background program).
 - **No screenless desktop test on GitHub.** Hyprland needs a real display device and login session there. The check verifies packages and configs instead.
-- **Quiet boot and boot splash are left for phase 6**, so boot messages stay visible while early images are being debugged.
+- **Quiet boot and boot splash are left for phase 8**, so boot messages stay visible while early images are being debugged.
 - **Support packages** not named in `SPEC.md` but needed for the listed pieces to work: sound (pipewire), graphics drivers (mesa), fonts, icons, `dbus-user-session`, `polkitd`, `network-manager`, `wpasupplicant`, `jq`, `procps`. Full list: `config/packages.txt`.
 
 ## Known gaps (later phases)
 
-- The image download is about 1.7 GB, which is big for a minimal system. Find out what takes the space in the phase 6 size and speed pass.
-
+- The image download is about 1.7 GB, which is big for a minimal system. Find out what takes the space in the phase 8 size and speed pass.
 - No browser, VS Code, Godot, Minecraft or emulators yet (phase 4).
 - Wi-Fi and Bluetooth have no menu yet (phase 2). Wired network works by itself. Wi-Fi from a terminal: `nmcli device wifi connect "NAME" password "PASSWORD"`.
 - One theme (phase 3 adds five more and the theme picker).
-- Deck features (touch, on-screen keyboard, controller, Pico, breadboard module) are phase 5.
+- Deck board bring-up is phase 5; deck features (touch, on-screen keyboard, controller, Pico, breadboard module) are phase 6; offline AI is phase 7.
+- `nexus-open keyboard` still says the on-screen keyboard comes in "build phase 5"; it is phase 6 now. Fix with the next code change (phase 2).
+- `SPEC.md` says users can add shortcuts in `~/.config/hypr/bindings.lua`, but phase 1 doesn't load that file yet. For now, add them to `~/.config/hypr/hyprland.lua`. Fix: roadmap task 2.15.
+- `pico/lid-sensor/README.md` still mentions the old Settings app (fixed in phase 6.4).
 - The Pico firmware is in `pico/lid-sensor/`. The Python helpers for it are still on `tactical-v1`.
 
 ## If the desktop does not start

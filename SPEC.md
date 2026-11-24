@@ -9,8 +9,8 @@ NEXUS OS 2 is a fast, minimal, smooth Linux desktop in the style of Omarchy, fil
 - **Feel:** every window, workspace and pop-up glides or fades. Nothing pops in. Nothing stutters.
 - **Look:** clean and calm. Flat dark themes, soft rounded corners, thin borders, gaps between windows, one accent colour. No neon, no grids, no HUD.
 - **Speed first:** small install, few background services, fast boot straight to the lock screen.
-- **Machines:** Dell OptiPlex 3060 SFF now (`BOARD=uefi-x86`). The cyberdeck board later (Pi 4/5, RK3566 or RK3588) by changing `config/board.conf`. Nothing may depend on one board except that file.
-- **Priorities, in order:** smooth everyday use, coding and making (Godot, Pico, Python), gaming (Minecraft, retro), AI on the home PC.
+- **Machines:** Dell OptiPlex 3060 SFF now (`BOARD=uefi-x86`). The cyberdeck board later (chosen before phase 5; it must be able to run a small AI model, so an RK3588 board or a Raspberry Pi 5) by changing `config/board.conf`. Nothing may depend on one board except that file.
+- **Priorities, in order:** smooth everyday use, coding and making (Godot, Pico, Python), gaming (Minecraft, retro), Iris AI (home PC, plus a small offline model on the deck).
 
 ## Base system and build pipeline
 
@@ -53,6 +53,11 @@ v2 lives at the repo root. The `prototype/` folder and its workflow are removed 
 | `pico/lid-sensor/` | Pico firmware for the hinge sensor and battery voltage |
 | `tools/` | Build helpers (download fetcher, wallpaper generator) |
 | `.github/workflows/build.yml` | Build check + image build |
+| `.github/workflows/check.yml` | The fast check (every push) |
+| `.github/workflows/vm-disk.yml` | VMware machine made from each image |
+| `ci/` | Check scripts and unit tests |
+| `docs/` | All documentation: user guide, roadmap, architecture, developer guide, testing, hardware, AI, decisions, glossary, install guides |
+| `docs/hardware/case/` | Case and breadboard module CAD (Fusion 360 script, STLs, labels) |
 
 ## Desktop
 
@@ -122,6 +127,7 @@ Omarchy-style. `Super` is the Windows key.
 | Super + Ctrl + Space | Next wallpaper |
 | Super + Shift + Ctrl + Space | Theme picker |
 | Super + Shift + K | On-screen keyboard |
+| Super + I | Ask Iris (quick question) |
 | Print | Screenshot of the whole screen |
 | Shift + Print | Screenshot of an area |
 | Volume / brightness keys | Change level, SwayOSD shows it |
@@ -196,6 +202,17 @@ How it works:
 | Timeshift (snapshots) | All |
 | Samba share for the `ROMs` folder | All |
 
+## Iris (AI)
+
+Iris is Elijah's AI assistant. Full design: `docs/AI.md`.
+
+- **Home PC:** the Iris app opens Open WebUI from the home PC in a Chromium app window. Address set in NEXUS menu > Setup > Iris. Reaches the PC from anywhere through Tailscale. (Phase 4.)
+- **Offline on the deck:** a small language model (1 to 3 billion parameters, 4-bit) runs on the deck through `llama.cpp` (or RKLLM on an RK3588 NPU) when the home PC can't be reached. Models are downloaded from the menu to the SD card (`/mnt/sdcard/models/`), never put in the image. (Phase 7.)
+- **Automatic choice:** home PC if it answers within 2 seconds, otherwise the deck's model. The window title says which one is answering.
+- **Quick ask:** Super + I opens a one-line question box; the answer appears as a notification with "Open in Iris".
+- **Limits:** the local model server only starts when asked, stops after 10 idle minutes, refuses to start under 20 % battery, pauses while a game is fullscreen, and only listens on the deck itself (`127.0.0.1`).
+- **Target:** at least 5 words a second from the local model, with the desktop staying smooth.
+
 ## Speed targets
 
 Measured with `systemd-analyze` and `free -m`, and reported by `nexus-bench` (prints boot time, idle memory and the five slowest services).
@@ -247,7 +264,7 @@ What NEXUS OS does with it:
 
 ### Case
 
-The case is designed and 3D-printed from scratch (no bought case), sized around the screen, keyboard, trackball, battery and the double module slot.
+The case is designed and 3D-printed from scratch (no bought case), sized around the screen, keyboard, trackball, battery and the double module slot. It is a Fusion 360 script with every size in one table: `docs/hardware/case/`. Details and the board comparison: `docs/HARDWARE.md`.
 
 ## Changes from v1
 
@@ -265,14 +282,16 @@ The case is designed and 3D-printed from scratch (no bought case), sized around 
 
 ## Build phases
 
-Only one phase at a time. The next starts after Elijah confirms the current one works on the OptiPlex (and later the deck).
+Only one phase at a time. The next starts after Elijah confirms the current one works on the OptiPlex (and later the deck). Tasks, tests and device checklists for each phase: `docs/ROADMAP.md`.
 
 1. **Smooth desktop on the OptiPlex.** Remove `prototype/`, rework the workflow (build check + image build with `BUILD_DESKTOP=no`), backports set up, Hyprland + auto-login + hyprlock, Waybar, fuzzel, mako, SwayOSD, foot, Thunar, Tokyo Night hard-wired through the template system, all shortcuts, animations, service trimming, `nexus-bench`. Update `CLAUDE.md` to match this spec.
 2. **NEXUS menu.** All sections except Install, plus `nexus-wifi`, `nexus-bluetooth`, power menu, screenshots, idle settings.
 3. **Themes.** All six themes, generated wallpapers, theme picker, live switching, low-effects mode switch.
-4. **Apps.** Everything in the Preinstalled table, then the Install menu.
-5. **Deck.** Deck board build, automatic low-effects mode, touch swipes, on-screen keyboard, controller mouse mode, Pico lid/battery, SD card setup.
-6. **Polish and speed pass.** Measure against the speed targets on both machines and fix the slow parts, Plymouth splash, Minecraft and emulator tuning.
+4. **Apps.** Everything in the Preinstalled table, then the Install menu, and Iris through the home PC.
+5. **Deck board.** Choose and buy the board (must run a small AI model), add it as a second build target, bring the desktop up on it with the Waveshare screen, automatic low-effects mode.
+6. **Deck hardware.** Touch swipes, on-screen keyboard, controller mouse mode, Pico lid/battery, SD card setup, module slots and the breadboard module (pop-up, `BB` bar chip, over-current warning).
+7. **Offline AI.** Local model server, model downloads, automatic home-PC/local choice, Super + I quick ask.
+8. **Polish and speed pass.** Measure against the speed targets on both machines and fix the slow parts, image size, Plymouth splash, Minecraft and emulator tuning, first-boot welcome, the v2.0 release.
 
 ## Known risks
 
@@ -281,12 +300,17 @@ Only one phase at a time. The next starts after Elijah confirms the current one 
 | Backports Hyprland needs newer libraries than Debian stable (one report of a `libxkbcommon` clash) | Build check catches it. Install the Hyprland family together with `-t trixie-backports` so matching libraries come from backports too |
 | Hyprland's Lua config is new and changes between versions | Write for the exact version in backports; the build check verifies the config |
 | Smoothness on a small ARM GPU is unproven | Low-effects mode; test on the deck in phase 5 |
+| Local AI too slow or too hot on the deck | Board chosen for AI (phase 5); smallest model as default; server only runs on demand |
 | Minecraft on Wayland | Runs through XWayland; needs device test |
-| Touch edge swipes (`lisgd`) and `wvkbd` behaviour under Hyprland | Needs device test in phase 5 |
+| Touch edge swipes (`lisgd`) and `wvkbd` behaviour under Hyprland | Needs device test in phase 6 |
 | Nothing can be tested without hardware | Every feature is listed as "needs device test" in `PROGRESS.md` until Elijah confirms it |
 
 ## Open decisions
 
-- [ ] Deck board (Radxa Zero 3W re-order, Pi 4/5 or RK3588)
-- [ ] Iris / Open WebUI address on the home PC
+Tracked with their options in `docs/DECISIONS.md`.
+
+- [ ] Deck board: an RK3588 board (recommended) or a Raspberry Pi 5 (with or without the AI HAT+ 2). Needed before phase 5
+- [ ] Iris / Open WebUI address on the home PC. Needed for phase 4
+- [ ] Default offline AI model. Chosen by testing in phase 7
 - [ ] Home PC Windows Home or Pro (Remmina vs RustDesk, only if remote desktop is installed)
+- [ ] Keep `start-hyprland` (built in phase 1) or switch the session start to `uwsm` as written above

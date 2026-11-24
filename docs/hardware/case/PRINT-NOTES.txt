@@ -1,0 +1,41 @@
+NEXUS cyberdeck case + breadboard module  (draft 0.1)
+=====================================================
+
+PRINT THIS FIRST
+  clip_test.stl   Small test piece (about 15 minutes). Push harvested breadboard clips
+                  into the slots from the open side. One notch on the edge = 2.0 mm slots,
+                  two notches = 2.1 mm, three notches = 2.2 mm. The two long slots at the
+                  front are for power-rail clips (2.0 mm and 2.2 mm). Tell Claude which width
+                  holds the clips snugly and whether jumper wires go in and grip.
+
+BREADBOARD MODULE (195 x 88 x 20 mm)
+  bb_body.stl     Print with the top face on the bed (the STL is already turned over).
+                  0.2 mm nozzle is best. With a 0.4 mm nozzle set the wall generator to
+                  Arachne. Layer height 0.12 to 0.16 mm, no supports.
+  bb_cover.stl    Bottom cover. Print flat side down. 4 magnets (6 x 2 mm) glue into the
+                  round pockets on the underside.
+  module_labels.svg  Label stickers. Print on paper or sticker sheet at 100% scale.
+
+  Clips needed: 126 short clips + the power-rail clips = everything from one full-size
+  (830 hole) breadboard. The pin section does NOT use clips. It is a window for female
+  header strips (4 rows x 40) that solder to the module's circuit board.
+  Screws: 6 x M2.5 x 16 mm self-tapping.
+
+CONTROLLER TRAY (97.2 x 88 x 20 mm)
+  controller_tray.stl   Print two. Pocket for an 8BitDo Zero 2 plus a jumper-wire bin.
+
+DECK (250 x 218.5 mm, 51 mm thick when closed)   -- DRAFT, DO NOT PRINT YET
+  deck_base.stl    Bottom tub. Print as it sits.
+  module_bay.stl   Tub the module drops into. Print floor down.
+  deck_plate.stl   Top plate. Print flat.
+  lid_bezel.stl    Screen surround. Print outer face down.
+  lid_back.stl     Lid shell. STL is already turned over (outer face on the bed).
+  Hinge: one M3 x 30 bolt + lock nut per side.
+
+  These deck sizes are placeholders until the real parts are measured:
+    - keyboard opening (229.6 x 96.25 mm) and the height of its support posts
+    - trackball opening (30 mm) and the two mouse button openings
+    - screen window (156 x 88 mm), screen thickness (sets the 18 mm lid thickness)
+    - port openings in the left wall, power button hole in the right wall
+    - pogo connector opening (16 x 7 mm) in the bay floor and the module cover
+    - no mounts yet for the main board or battery (board not chosen)

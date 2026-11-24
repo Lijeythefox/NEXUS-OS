@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="110mm" viewBox="0 0 210 110" font-family="DejaVu Sans Mono, Consolas, monospace">
+<text x="5" y="6" font-size="3">NEXUS breadboard module labels. Print at 100% scale (no "fit to page"). Cut on the thin outlines.</text>
+<g transform="translate(5,12)"><rect width="103.00" height="8.2" fill="white" stroke="black" stroke-width="0.1"/>
+<text transform="translate(2.67,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#000">GND</text>
+<text transform="translate(5.21,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP0</text>
+<text transform="translate(7.75,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP1</text>
+<text transform="translate(10.29,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP2</text>
+<text transform="translate(12.83,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP3</text>
+<text transform="translate(15.37,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP4</text>
+<text transform="translate(17.91,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP5</text>
+<text transform="translate(20.45,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP6</text>
+<text transform="translate(22.99,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP7</text>
+<text transform="translate(25.53,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#000">GND</text>
+<text transform="translate(28.07,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP8</text>
+<text transform="translate(30.61,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP9</text>
+<text transform="translate(33.15,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP10</text>
+<text transform="translate(35.69,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP11</text>
+<text transform="translate(38.23,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP12</text>
+<text transform="translate(40.77,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP13</text>
+<text transform="translate(43.31,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP14</text>
+<text transform="translate(45.85,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP15</text>
+<text transform="translate(48.39,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#000">GND</text>
+<text transform="translate(50.93,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP16</text>
+<text transform="translate(53.47,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP17</text>
+<text transform="translate(56.01,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP18</text>
+<text transform="translate(58.55,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP19</text>
+<text transform="translate(61.09,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP20</text>
+<text transform="translate(63.63,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP21</text>
+<text transform="translate(66.17,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP22</text>
+<text transform="translate(68.71,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#000">GND</text>
+<text transform="translate(71.25,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP26</text>
+<text transform="translate(73.79,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP27</text>
+<text transform="translate(76.33,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">GP28</text>
+<text transform="translate(78.87,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#000">GND</text>
+<text transform="translate(81.41,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a1b26">RUN</text>
+<text transform="translate(83.95,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#000">GND</text>
+<text transform="translate(86.49,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a7f37">3V3</text>
+<text transform="translate(89.03,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#1a7f37">3V3</text>
+<text transform="translate(91.57,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#c62828">5V</text>
+<text transform="translate(94.11,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#c62828">5V</text>
+<text transform="translate(96.65,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#b26a00">ADJA</text>
+<text transform="translate(99.19,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#b26a00">ADJB</text>
+<text transform="translate(101.73,7.6) rotate(-90)" font-size="1.9" font-weight="bold" fill="#000">GND</text>
+</g>
+<text x="5" y="24.2" font-size="2.5">Pin strip (103.0 x 8.2 mm): goes in the recess in front of the pin sockets. Text reads bottom-to-top.</text>
+<g transform="translate(5,34)"><rect width="16" height="70" fill="white" stroke="black" stroke-width="0.1"/>
+<rect x="3" y="61" width="10" height="4" fill="none" stroke="black" stroke-width="0.1" stroke-dasharray="0.6 0.4"/>
+<rect x="2.5" y="49" width="11.0" height="4" fill="none" stroke="black" stroke-width="0.1" stroke-dasharray="0.6 0.4"/>
+<rect x="2.5" y="17" width="11.0" height="4" fill="none" stroke="black" stroke-width="0.1" stroke-dasharray="0.6 0.4"/>
+<rect x="3" y="5" width="10" height="4" fill="none" stroke="black" stroke-width="0.1" stroke-dasharray="0.6 0.4"/>
+<circle cx="4.5" cy="35" r="1.8" fill="none" stroke="black" stroke-width="0.1" stroke-dasharray="0.6 0.4"/>
+<circle cx="11.5" cy="35" r="1.8" fill="none" stroke="black" stroke-width="0.1" stroke-dasharray="0.6 0.4"/>
+<circle cx="8" cy="42" r="1.1" fill="none" stroke="black" stroke-width="0.1" stroke-dasharray="0.6 0.4"/>
+<text x="8" y="2.799999999999997" font-size="1.8" text-anchor="middle" font-weight="bold">TOP RAIL</text>
+<text x="8" y="11.799999999999997" font-size="1.7" text-anchor="middle" font-weight="bold">3.3  ADJ   5</text>
+<text x="8" y="23.799999999999997" font-size="1.7" text-anchor="middle" font-weight="bold">KNOB</text>
+<text x="4.5" y="31.6" font-size="1.4" text-anchor="middle" font-weight="bold">BOOT</text>
+<text x="11.5" y="31.6" font-size="1.4" text-anchor="middle" font-weight="bold">RST</text>
+<text x="8" y="45.4" font-size="1.4" text-anchor="middle" font-weight="bold">RAILS ON</text>
+<text x="8" y="47.4" font-size="1.7" text-anchor="middle" font-weight="bold">KNOB</text>
+<text x="8" y="58.8" font-size="1.7" text-anchor="middle" font-weight="bold">3.3  ADJ   5</text>
+<text x="8" y="68.4" font-size="1.8" text-anchor="middle" font-weight="bold">BOTTOM RAIL</text>
+</g>
+<text x="25" y="40" font-size="2.5">Controls label (16 x 70 mm): goes in the recess over the switches.</text>
+<text x="25" y="44" font-size="2.5">Cut out the dashed shapes before sticking it on.</text>
+</svg>

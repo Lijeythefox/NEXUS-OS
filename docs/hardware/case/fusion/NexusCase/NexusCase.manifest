@@ -1,0 +1,10 @@
+{
+	"autodeskProduct": "Fusion360",
+	"type": "script",
+	"author": "Elijah + Claude",
+	"description": {
+		"": "Builds the NEXUS cyberdeck case and breadboard module as editable parts."
+	},
+	"supportedOS": "windows|mac",
+	"editEnabled": true
+}

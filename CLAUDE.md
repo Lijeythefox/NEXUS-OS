@@ -1,6 +1,6 @@
 # NEXUS OS: instructions for Claude Code
 
-Read this file, `SPEC.md` and `PROGRESS.md` at the start of every session before doing anything.
+Read this file, `SPEC.md`, `docs/ROADMAP.md` and `PROGRESS.md` at the start of every session before doing anything. `SPEC.md` says what to build, `docs/ROADMAP.md` says in what order and how (tasks, files, tests, device checklists), `PROGRESS.md` says where things stand. The rest of `docs/` explains the system (start at `docs/README.md`).
 
 ## What this project is
 
@@ -11,7 +11,7 @@ The old tactical version (XFCE, Conky HUD, Settings app) is on the `tactical-v1`
 ## The hardware
 
 - **Now:** Dell OptiPlex 3060 SFF (`BOARD=uefi-x86`). This is the only machine that can be tested.
-- **Later:** the cyberdeck. Board undecided (Radxa Zero 3W, Pi 4/5 or RK3588). Nothing may depend on a board except `config/board.conf`.
+- **Later:** the cyberdeck. Board decided before phase 5 (see `docs/HARDWARE.md`). It must run a small offline AI model, so an RK3588 board or a Raspberry Pi 5; the Radxa Zero 3W is ruled out. Nothing may depend on a board except `config/board.conf`.
 - Deck screen: Waveshare 7" 1024x600 capacitive touchscreen (H), HDMI.
 - Deck input: custom 40% keyboard, trackball, touchscreen, Bluetooth controller trays, swappable breadboard module (see `SPEC.md`).
 
@@ -32,17 +32,20 @@ The old tactical version (XFCE, Conky HUD, Settings app) is on the `tactical-v1`
 - When changing a file, show the full updated file, not just the changed lines.
 - Keep explanations short once the context is clear.
 - Ask before adding packages or features that are not in `SPEC.md`.
+- Record every important choice (and anything built differently from `SPEC.md`) in `docs/DECISIONS.md`.
 
 ## Build in phases
 
-Only work on the current phase (see `SPEC.md` > Build phases). Do not start the next phase until Elijah confirms the image boots and the current phase works on the device.
+Only work on the current phase (see `docs/ROADMAP.md`). Do not start the next phase until Elijah confirms the image boots and the current phase's device checklist passes. When a phase starts, write its step-by-step plan in `docs/superpowers/plans/`.
 
 1. Smooth desktop on the OptiPlex.
 2. NEXUS menu.
 3. Themes.
-4. Apps.
-5. Deck.
-6. Polish and speed pass.
+4. Apps (and Iris through the home PC).
+5. Deck board: choose it and bring the desktop up on it.
+6. Deck hardware (touch, keyboard, controller, Pico, SD card, modules, breadboard module).
+7. Offline AI on the deck.
+8. Polish, speed and the v2.0 release.
 
 ## Checks before every image build
 
@@ -55,7 +58,7 @@ Write the test first for anything with logic (see `ci/tests.sh`). Only merge to 
 
 ## After every change
 
-1. Update `PROGRESS.md` with: the current phase, what changed, what still needs doing, known issues, and anything marked "needs device test".
+1. Update `PROGRESS.md` (and any doc in `docs/` the change affects) with: the current phase, what changed, what still needs doing, known issues, and anything marked "needs device test".
 2. Commit with a clear message and push so GitHub Actions starts a build.
 3. Give Elijah a short test checklist: the exact things to try once he flashes the new image, written as steps he can tick off.
 
@@ -82,7 +85,9 @@ He will paste error text or describe what he saw, sometimes with photos of the s
 | `overlay/usr/share/nexus/templates/` | Config templates the theme colours are poured into |
 | `overlay/usr/local/bin/nexus-*` | NEXUS commands |
 | `overlay/etc/skel/` | Starter files for a new user |
-| `pico/lid-sensor/` | MicroPython code for the Pico hinge sensor (deck, phase 5) |
+| `pico/lid-sensor/` | MicroPython code for the Pico hinge sensor (deck, phase 6) |
 | `ci/` | Check scripts and unit tests |
 | `.github/workflows/` | `check.yml` (fast check) and `build.yml` (image build) |
-| `docs/` | Install guides, plans |
+| `docs/` | All documentation (index: `docs/README.md`): user guide, roadmap, architecture, developer guide, testing, hardware, AI, decisions, glossary, install guides, phase plans |
+| `docs/hardware/case/` | Case and breadboard module CAD: Fusion 360 script, STLs, labels |
+| `README.md` | Front page of the repo |
